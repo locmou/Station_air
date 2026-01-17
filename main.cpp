@@ -162,6 +162,12 @@ void loop() {
 
 float Ro = 10.0;  // Résistance du capteur dans l'air pur (sera calculée)
 
+// Déclarations des fonctions
+float calibrateMQ7();
+float readRS();
+float calculatePPM(float ratio);
+float readRSAverage(int samples);
+
 void setup() {
   Serial.begin(115200);
   pinMode(MQ7_PIN, INPUT);
