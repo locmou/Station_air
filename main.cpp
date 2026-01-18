@@ -27,18 +27,24 @@ DHTesp dhtSensor;
 LiquidCrystal_I2C lcd(0x27, 20, 4); // Adapter l'adresse I2C (0x27 ou 0x3F)
 
 /** Pin number for DHT11 1 data pin */
-const uint8_t dhtPin = 32;
+#define dhtPin 32
 
 //Définition des contrastes
-const uint8_t BRIGHTNESS_PIN=5;   // Must be a PWM pin
+#define BRIGHTNESS_PIN 5   // Must be a PWM pin
 
 // Définir la broche 33 comme entrée analogique
-const uint8_t LDR = 33;
+#define LDR 33
 uint8_t bright;
 
 // ---------- CONFIG MQ-7 / ESP32 ----------
 #define MQ7_PIN 34              // Entrée analogique
 #define MESURE_INTERVAL 10000    // ms entre deux mesures + publication
+#define RL_VALUE 10.0           // Résistance de charge en kOhms (10kΩ sur Flying Fish)
+#define RO_CLEAN_AIR_FACTOR 27.5 // Ratio RS/RO dans l'air pur pour MQ7
+#define ADC_RESOLUTION 4095.0   // Résolution ADC 12 bits ESP32
+
+float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, à calibrer)
+
 unsigned long lastMeasure = 0;
 
 /*****************************Congfig wifi********************
@@ -63,6 +69,18 @@ void Retroeclairage(){
   analogWrite(BRIGHTNESS_PIN, bright);
   }
 
+/**********************************Lecture mq7*************************************** */
+float readRS() {
+  int adcValue = analogRead(MQ7_PIN);
+  
+  // Conversion ADC vers tension (0-3.3V sur ESP32)
+  float voltage = (adcValue / ADC_RESOLUTION) * 3.3;
+  
+  // Calcul de RS : RS = [(Vc × RL) / Vout] - RL
+  float rs = ((3.3 * RL_VALUE) / voltage) - RL_VALUE;
+  
+  return rs;
+}
 /*******************************WIFI/MQTT**********************************
 // ---------- FONCTIONS ----------
 void setup_wifi() {
