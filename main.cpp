@@ -59,12 +59,12 @@ byte rightBot[8] = {0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x1F};
 
 // Variables pour l'alternance d'affichage
 unsigned long lastDisplayChange = 0;
-const unsigned long DISPLAY_DURATION = 5000;  // 5 secondes
+const unsigned long DISPLAY_DURATION = 9000;  // 5 secondes
 bool showBigPPM = true;  // true = afficher PPM, false = afficher détails
 
 // Variables pour le défilement des infos
 unsigned long lastInfoChange = 0;
-const unsigned long INFO_DURATION = 1666;  // ~1.66 sec par info (5000ms / 3 infos)
+const unsigned long INFO_DURATION = 3000;  // 3sec par info
 int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
 
 /*****************************Congfig wifi********************
@@ -321,7 +321,7 @@ void loop() {
     float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
 ////////////////////Ajout pour test//////////////////////////////////////////////
-    lcd.setCursor(10, 1);  lcd.print("PPM:");  lcd.print(ppm);
+    lcd.setCursor(10, 1);  lcd.print("rs:");  lcd.print(rs);
 /////////////////////////////////////////////////////////////////////
 
     // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
@@ -339,7 +339,8 @@ void loop() {
 if (showBigPPM) {
   // MODE 1 : Affichage PPM en gros (5 secondes)
   printBigNumber((int)ppm);
-  
+  //printBigNumber(342);
+
 } else {
   // MODE 2 : Défilement des infos (5 secondes total)
   
@@ -379,6 +380,9 @@ if (showBigPPM) {
       break;
   }
 }
+
+  // Petit délai pour éviter de surcharger le LCD
+  delay(500);
 
     /************* a ajouter pour passer au aht/BMP **************
     /*  // ----- Lecture AHT20 -----
