@@ -56,6 +56,17 @@ byte rightTop[8] = {0x1F,0x01,0x01,0x00,0x00,0x00,0x00,0x00};
 byte leftBot[8] = {0x00,0x00,0x00,0x00,0x00,0x10,0x10,0x1F};
 byte rightBot[8] = {0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x1F};
 
+
+// Variables pour l'alternance d'affichage
+unsigned long lastDisplayChange = 0;
+const unsigned long DISPLAY_DURATION = 5000;  // 5 secondes
+bool showBigPPM = true;  // true = afficher PPM, false = afficher détails
+
+// Variables pour le défilement des infos
+unsigned long lastInfoChange = 0;
+const unsigned long INFO_DURATION = 1666;  // ~1.66 sec par info (5000ms / 3 infos)
+int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
+
 /*****************************Congfig wifi********************
 // ---------- OBJET WiFiMulti ----------
 WiFiMulti wifiMulti;
@@ -273,6 +284,7 @@ lcd.createChar(6, rightBot);
 } 
 
 /*********************************************VOID LOOP ************************************************ */
+
 void loop() {
 
   unsigned long now = millis();
@@ -300,12 +312,72 @@ void loop() {
 
     // Affichage bright 
     lcd.setCursor(0, 1);  lcd.print("Bright: ");  lcd.print(bright);
+   }
 
     // Lecture du MQ-7 avec calcul calibré
     int rawValue = analogRead(MQ7_PIN);
     float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
     float ratio = rs / Ro;            // Calcul du ratio RS/Ro
     float ppm = calculatePPM(ratio);  // Conversion en PPM réels
+
+    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE ==========
+    unsigned long currentTime = millis();
+
+    // Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
+    if (currentTime - lastDisplayChange >= DISPLAY_DURATION) {
+      lastDisplayChange = currentTime;
+      showBigPPM = !showBigPPM;  // Inverse le mode
+      currentInfo = 0;  // Réinitialise l'info à afficher
+      lastInfoChange = currentTime;
+    }
+
+// ========== AFFICHAGE SELON LE MODE ==========
+if (showBigPPM) {
+  // MODE 1 : Affichage PPM en gros (5 secondes)
+  printBigNumber((int)ppm);
+  
+} else {
+  // MODE 2 : Défilement des infos (5 secondes total)
+  
+  // Vérifier si on doit passer à l'info suivante
+  if (currentTime - lastInfoChange >= INFO_DURATION) {
+    lastInfoChange = currentTime;
+    currentInfo++;
+    if (currentInfo > 2) currentInfo = 0;  // Boucle : 0, 1, 2, 0, 1, 2...
+  }
+  
+  // Effacer les lignes 2 et 3
+  lcd.setCursor(0, 2); lcd.print("                    ");
+  lcd.setCursor(0, 3); lcd.print("                    ");
+  
+  // Afficher l'info correspondante
+  switch(currentInfo) {
+    case 0:  // RS
+      lcd.setCursor(0, 2);
+      lcd.print("RS (Resistance):");
+      lcd.setCursor(0, 3);
+      lcd.print(rs, 2);
+      lcd.print(" kOhms");
+      break;
+      
+    case 1:  // Ratio
+      lcd.setCursor(0, 2);
+      lcd.print("Ratio RS/Ro:");
+      lcd.setCursor(0, 3);
+      lcd.print(ratio, 2);
+      break;
+      
+    case 2:  // Brut
+      lcd.setCursor(0, 2);
+      lcd.print("Valeur brute ADC:");
+      lcd.setCursor(0, 3);
+      lcd.print(rawValue);
+      break;
+  }
+}
+
+
+
 
     /************* a ajouter pour passer au aht/BMP **************
     /*  // ----- Lecture AHT20 -----
@@ -348,15 +420,6 @@ void loop() {
     Serial.print(pseudoPPM);
     Serial.println(" ppm (approx)");*/
 
-    // Affichage LCD 20x4
-    lcd.setCursor(0, 2);
-    lcd.print("CO MQ7 =>  "); lcd.print("Brut : "); lcd.print(rawValue);
-
-    lcd.setCursor(0, 3);
-    lcd.print("Approx :");
-    lcd.print((int)pseudoPPM);
-    lcd.print(" ppm");
-
 /*
     lcd.setCursor(0, 3);
     lcd.print("WiFi: ");
@@ -368,5 +431,5 @@ void loop() {
     snprintf(payload, sizeof(payload), "%d", rawValue);
     client.publish(mqtt_topic, payload);
 */
-  }
+  
 }
