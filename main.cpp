@@ -70,8 +70,7 @@ void Retroeclairage(){
   }
 
 /**********************************Lecture mq7*************************************** */
-float readRS() {
-  int adcValue = analogRead(MQ7_PIN);
+float readRS(int adcValue) {
   
   // Conversion ADC vers tension (0-3.3V sur ESP32)
   float voltage = (adcValue / ADC_RESOLUTION) * 3.3;
@@ -80,6 +79,17 @@ float readRS() {
   float rs = ((3.3 * RL_VALUE) / voltage) - RL_VALUE;
   
   return rs;
+}
+
+float calculatePPM(float ratio) {
+  // Constantes de la courbe MQ7 pour le CO
+  float m = -0.46;  // Pente de la courbe log-log
+  float b = 0.42;   // Ordonnée à l'origine
+  
+  // Formule : PPM = 10^[(log(ratio) - b) / m]
+  float ppm = pow(10, ((log10(ratio) - b) / m));
+  
+  return ppm;
 }
 /*******************************WIFI/MQTT**********************************
 // ---------- FONCTIONS ----------
@@ -204,11 +214,11 @@ void loop() {
     // Affichage bright 
     lcd.setCursor(0, 1);  lcd.print("Bright: ");  lcd.print(bright);
 
-    // Lecture brute du MQ-7 (0-4095 sur ESP32)
+    // Lecture du MQ-7 avec calcul calibré
     int rawValue = analogRead(MQ7_PIN);
-
-    // Conversion approximative en "pseudo ppm"
-    float pseudoPPM = (rawValue / 4095.0) * 1000.0;
+    float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
+    float ratio = rs / Ro;            // Calcul du ratio RS/Ro
+    float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
     /************* a ajouter pour passer au aht/BMP **************
     /*  // ----- Lecture AHT20 -----
