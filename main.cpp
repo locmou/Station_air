@@ -47,6 +47,15 @@ float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, 
 
 unsigned long lastMeasure = 0;
 
+// Caractères personnalisés pour gros chiffres
+byte topBlock[8] = {0x1F,0x1F,0x1F,0x00,0x00,0x00,0x00,0x00};
+byte botBlock[8] = {0x00,0x00,0x00,0x00,0x00,0x1F,0x1F,0x1F};
+byte fullBlock[8] = {0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F};
+byte leftTop[8] = {0x1F,0x10,0x10,0x00,0x00,0x00,0x00,0x00};
+byte rightTop[8] = {0x1F,0x01,0x01,0x00,0x00,0x00,0x00,0x00};
+byte leftBot[8] = {0x00,0x00,0x00,0x00,0x00,0x10,0x10,0x1F};
+byte rightBot[8] = {0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x1F};
+
 /*****************************Congfig wifi********************
 // ---------- OBJET WiFiMulti ----------
 WiFiMulti wifiMulti;
@@ -91,6 +100,7 @@ float calculatePPM(float ratio) {
   
   return ppm;
 }
+
 /*******************************WIFI/MQTT**********************************
 // ---------- FONCTIONS ----------
 void setup_wifi() {
@@ -122,6 +132,16 @@ void reconnect_mqtt() {
 
 /***********************************VOID SETUP*********************************************** */
 void setup() {
+
+  // Créer les caractères personnalisés
+lcd.createChar(0, topBlock);
+lcd.createChar(1, botBlock);
+lcd.createChar(2, fullBlock);
+lcd.createChar(3, leftTop);
+lcd.createChar(4, rightTop);
+lcd.createChar(5, leftBot);
+lcd.createChar(6, rightBot);
+
 
   /*********************WIFI/MQTT**************
   // WiFi + MQTT
@@ -281,7 +301,5 @@ void loop() {
     snprintf(payload, sizeof(payload), "%d", rawValue);
     client.publish(mqtt_topic, payload);
 */
-
   }
-
 }
