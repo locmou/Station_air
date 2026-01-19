@@ -101,6 +101,73 @@ float calculatePPM(float ratio) {
   return ppm;
 }
 
+
+// Affiche un chiffre en gros (3 colonnes × 2 lignes)
+void printBigDigit(int digit, int col, int row) {
+  switch(digit) {
+    case 0:
+      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(2);
+      break;
+    case 1:
+      lcd.setCursor(col, row);     lcd.print(" "); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.write(1); lcd.write(2);
+      break;
+    case 2:
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(1);
+      break;
+    case 3:
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(1); lcd.write(1); lcd.write(2);
+      break;
+    case 4:
+      lcd.setCursor(col, row);     lcd.write(2); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.print(" "); lcd.write(2);
+      break;
+    case 5:
+      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(0);
+      lcd.setCursor(col, row + 1); lcd.write(1); lcd.write(1); lcd.write(2);
+      break;
+    case 6:
+      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(0);
+      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(2);
+      break;
+    case 7:
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.print(" "); lcd.write(2);
+      break;
+    case 8:
+      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(2);
+      break;
+    case 9:
+      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(1); lcd.write(1); lcd.write(2);
+      break;
+  }
+}
+
+// Affiche un nombre entier en gros au centre des lignes 2-3
+void printBigNumber(int number) {
+  lcd.setCursor(0, 2); lcd.print("                    "); // Effacer ligne 2
+  lcd.setCursor(0, 3); lcd.print("                    "); // Effacer ligne 3
+  
+  // Convertir en string pour compter les chiffres
+  String numStr = String(number);
+  int numDigits = numStr.length();
+  
+  // Calcul position de départ pour centrer (chaque chiffre = 3 colonnes + 1 espace)
+  int startCol = (20 - (numDigits * 4 - 1)) / 2;
+  
+  // Afficher chaque chiffre
+  for(int i = 0; i < numDigits; i++) {
+    int digit = numStr.charAt(i) - '0';  // Convertir char en int
+    printBigDigit(digit, startCol + (i * 4), 2);
+  }
+}
+
+
 /*******************************WIFI/MQTT**********************************
 // ---------- FONCTIONS ----------
 void setup_wifi() {
