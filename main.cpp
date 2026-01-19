@@ -376,9 +376,6 @@ if (showBigPPM) {
   }
 }
 
-
-
-
     /************* a ajouter pour passer au aht/BMP **************
     /*  // ----- Lecture AHT20 -----
     sensors_event_t humid, tempAHT;
