@@ -311,7 +311,7 @@ void loop() {
     lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(data.humidity, 1);  lcd.print(" %");
 
     // Affichage bright 
-    lcd.setCursor(0, 1);  lcd.print("Bright: ");  lcd.print(bright);
+    lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
    }
 
     // Lecture du MQ-7 avec calcul calibré
@@ -320,7 +320,11 @@ void loop() {
     float ratio = rs / Ro;            // Calcul du ratio RS/Ro
     float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
-    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE ==========
+////////////////////Ajout pour test//////////////////////////////////////////////
+    lcd.setCursor(10, 1);  lcd.print("PPM:");  lcd.print(ppm);
+/////////////////////////////////////////////////////////////////////
+
+    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
     unsigned long currentTime = millis();
 
     // Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
