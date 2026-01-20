@@ -211,6 +211,19 @@ void reconnect_mqtt() {
 /***********************************VOID SETUP*********************************************** */
 void setup() {
 
+  // Déclaration des broches
+  pinMode(BRIGHTNESS_PIN, OUTPUT);
+  pinMode(LDR, INPUT);
+
+// LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+
+// Initialize temperature sensor 1
+  dhtSensor.setup(dhtPin, DHTesp::DHT11);
+
+
   // Créer les caractères personnalisés
 lcd.createChar(0, topBlock);
 lcd.createChar(1, botBlock);
@@ -220,6 +233,25 @@ lcd.createChar(4, rightTop);
 lcd.createChar(5, leftBot);
 lcd.createChar(6, rightBot);
 
+
+// TEST des caractères personnalisés
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("Test caracteres:");
+
+lcd.setCursor(0, 2);
+lcd.write(0);  // topBlock
+lcd.write(1);  // botBlock
+lcd.write(2);  // fullBlock
+
+lcd.setCursor(0, 3);
+lcd.write(3);  // leftTop
+lcd.write(4);  // rightTop
+lcd.write(5);  // leftBot
+lcd.write(6);  // rightBot
+
+delay(5000);  // Afficher pendant 5 secondes
+lcd.clear();
 
   /*********************WIFI/MQTT**************
   // WiFi + MQTT
@@ -269,17 +301,7 @@ lcd.createChar(6, rightBot);
   );
   */
 
-// Déclaration des broches
-  pinMode(BRIGHTNESS_PIN, OUTPUT);
-  pinMode(LDR, INPUT);
 
-// LCD
-  lcd.init();
-  lcd.backlight();
-  lcd.clear();
-
-// Initialize temperature sensor 1
-  dhtSensor.setup(dhtPin, DHTesp::DHT11);
   
 } 
 
