@@ -55,7 +55,7 @@ byte leftTop[8] = {0x1F,0x10,0x10,0x00,0x00,0x00,0x00,0x00};
 byte rightTop[8] = {0x1F,0x01,0x01,0x00,0x00,0x00,0x00,0x00};
 byte leftBot[8] = {0x00,0x00,0x00,0x00,0x00,0x10,0x10,0x1F};
 byte rightBot[8] = {0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x1F};
-
+byte midBlock[8] = {0x00,0x00,0x00,0x1F,0x1F,0x00,0x00,0x00}; 
 
 // Variables pour l'alternance d'affichage
 unsigned long lastDisplayChange = 0;
@@ -131,7 +131,7 @@ void printBigDigit(int digit, int col, int row) {
       break;
     case 3:
       lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.write(1); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(7); lcd.write(7); lcd.write(2);
       break;
     case 4:
       lcd.setCursor(col, row);     lcd.write(2); lcd.write(1); lcd.write(2);
@@ -233,6 +233,7 @@ lcd.createChar(3, leftTop);
 lcd.createChar(4, rightTop);
 lcd.createChar(5, leftBot);
 lcd.createChar(6, rightBot);
+lcd.createChar(7, midBlock);  // ← NOUVEAU
 
 
 // TEST des caractères personnalisés
