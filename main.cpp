@@ -47,15 +47,15 @@ float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, 
 
 unsigned long lastMeasure = 0;
 
-// Caractères personnalisés pour gros chiffres
-byte topBlock[8] = {0x1F,0x1F,0x1F,0x00,0x00,0x00,0x00,0x00};
-byte botBlock[8] = {0x00,0x00,0x00,0x00,0x00,0x1F,0x1F,0x1F};
-byte fullBlock[8] = {0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F};
-byte leftTop[8] = {0x1F,0x10,0x10,0x00,0x00,0x00,0x00,0x00};
-byte rightTop[8] = {0x1F,0x01,0x01,0x00,0x00,0x00,0x00,0x00};
-byte leftBot[8] = {0x00,0x00,0x00,0x00,0x00,0x10,0x10,0x1F};
-byte rightBot[8] = {0x00,0x00,0x00,0x00,0x00,0x01,0x01,0x1F};
-byte midBlock[8] = {0x00,0x00,0x00,0x1F,0x1F,0x00,0x00,0x00}; 
+// Caractères personnalisés optimisés pour chiffres LCD
+byte LT[8] = {B00111, B01111, B11111, B11111, B11111, B11111, B11111, B11111};  // 0: Left Top
+byte UB[8] = {B11111, B11111, B11111, B00000, B00000, B00000, B00000, B00000};  // 1: Upper Bar
+byte RT[8] = {B11100, B11110, B11111, B11111, B11111, B11111, B11111, B11111};  // 2: Right Top
+byte LL[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B01111, B00111};  // 3: Left Bottom
+byte LB[8] = {B00000, B00000, B00000, B00000, B00000, B11111, B11111, B11111};  // 4: Lower Bar
+byte LR[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11110, B11100};  // 5: Right Bottom
+byte MB[8] = {B11111, B11111, B11111, B00000, B00000, B00000, B11111, B11111};  // 6: Middle Bar
+byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}; // 7: Full Block
 
 // Variables pour l'alternance d'affichage
 unsigned long lastDisplayChange = 0;
@@ -118,44 +118,44 @@ float calculatePPM(float ratio) {
 void printBigDigit(int digit, int col, int row) {
   switch(digit) {
     case 0:
-      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(3); lcd.write(4); lcd.write(5);
       break;
     case 1:
-      lcd.setCursor(col, row);     lcd.print(" "); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(1); lcd.write(2); lcd.print(" ");
+      lcd.setCursor(col, row + 1); lcd.write(4); lcd.write(7); lcd.write(4);
       break;
     case 2:
-      lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(1);
+      lcd.setCursor(col, row);     lcd.write(6); lcd.write(6); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(3); lcd.write(4); lcd.write(4);
       break;
     case 3:
-      lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.write(7); lcd.write(7); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(1); lcd.write(6); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(4); lcd.write(6); lcd.write(5);
       break;
     case 4:
-      lcd.setCursor(col, row);     lcd.write(2); lcd.write(1); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.print(" "); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(3); lcd.write(4); lcd.write(7);
+      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.print(" "); lcd.write(7);
       break;
     case 5:
-      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(0);
-      lcd.setCursor(col, row + 1); lcd.write(1); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(6); lcd.write(6);
+      lcd.setCursor(col, row + 1); lcd.write(4); lcd.write(4); lcd.write(5);
       break;
     case 6:
-      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(0);
-      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(6); lcd.write(6);
+      lcd.setCursor(col, row + 1); lcd.write(3); lcd.write(4); lcd.write(5);
       break;
     case 7:
-      lcd.setCursor(col, row);     lcd.write(0); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.print(" "); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(1); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.print(" "); lcd.print(" "); lcd.write(7);
       break;
     case 8:
-      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.write(2); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(6); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(3); lcd.write(6); lcd.write(5);
       break;
     case 9:
-      lcd.setCursor(col, row);     lcd.write(2); lcd.write(0); lcd.write(2);
-      lcd.setCursor(col, row + 1); lcd.write(1); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(6); lcd.write(2);
+      lcd.setCursor(col, row + 1); lcd.write(4); lcd.write(4); lcd.write(5);
       break;
   }
 }
@@ -226,14 +226,14 @@ void setup() {
 
 
   // Créer les caractères personnalisés
-lcd.createChar(0, topBlock);
-lcd.createChar(1, botBlock);
-lcd.createChar(2, fullBlock);
-lcd.createChar(3, leftTop);
-lcd.createChar(4, rightTop);
-lcd.createChar(5, leftBot);
-lcd.createChar(6, rightBot);
-lcd.createChar(7, midBlock);  // ← NOUVEAU
+lcd.createChar(0, LT);
+lcd.createChar(1, UB);
+lcd.createChar(2, RT);
+lcd.createChar(3, LL);
+lcd.createChar(4, LB);
+lcd.createChar(5, LR);
+lcd.createChar(6, MB);
+lcd.createChar(7, block);
 
 
 // TEST des caractères personnalisés
@@ -348,13 +348,26 @@ void loop() {
     lcd.setCursor(10, 1);  lcd.print("rs:");  lcd.print(rs);
 /////////////////////////////////////////////////////////////////////
 
+   // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
+    unsigned long currentTime = millis();
+
+    // Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
+    if (currentTime - lastDisplayChange >= DISPLAY_DURATION) {
+      lastDisplayChange = currentTime;
+      showBigPPM = !showBigPPM;  // Inverse le mode
+      currentInfo = 0;  // Réinitialise l'info à afficher
+      lastInfoChange = currentTime;
+    }
+
+
 // ========== AFFICHAGE SELON LE MODE ==========
 if (showBigPPM) {
   // MODE 1 : Affichage PPM en gros
   if (lastDisplayedInfo != -2) {  // -2 = code pour "mode PPM"
     lcd.setCursor(0, 2); lcd.print("                    ");
     lcd.setCursor(0, 3); lcd.print("                    ");
-    printBigNumber((int)ppm);
+    //printBigNumber((int)ppm);
+    printBigNumber(3865);
     lastDisplayedInfo = -2;
   }
   
