@@ -66,6 +66,7 @@ bool showBigPPM = true;  // true = afficher PPM, false = afficher détails
 unsigned long lastInfoChange = 0;
 const unsigned long INFO_DURATION = 3000;  // 3sec par info
 int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
+int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
 
 /*****************************Congfig wifi********************
 // ---------- OBJET WiFiMulti ----------
@@ -346,60 +347,58 @@ void loop() {
     lcd.setCursor(10, 1);  lcd.print("rs:");  lcd.print(rs);
 /////////////////////////////////////////////////////////////////////
 
-    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
-    unsigned long currentTime = millis();
-
-    // Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
-    if (currentTime - lastDisplayChange >= DISPLAY_DURATION) {
-      lastDisplayChange = currentTime;
-      showBigPPM = !showBigPPM;  // Inverse le mode
-      currentInfo = 0;  // Réinitialise l'info à afficher
-      lastInfoChange = currentTime;
-    }
-
 // ========== AFFICHAGE SELON LE MODE ==========
 if (showBigPPM) {
-  // MODE 1 : Affichage PPM en gros (5 secondes)
-  printBigNumber((int)ppm);
-  //printBigNumber(342);
-
+  // MODE 1 : Affichage PPM en gros
+  if (lastDisplayedInfo != -2) {  // -2 = code pour "mode PPM"
+    lcd.setCursor(0, 2); lcd.print("                    ");
+    lcd.setCursor(0, 3); lcd.print("                    ");
+    printBigNumber((int)ppm);
+    lastDisplayedInfo = -2;
+  }
+  
 } else {
-  // MODE 2 : Défilement des infos (5 secondes total)
+  // MODE 2 : Défilement des infos
   
   // Vérifier si on doit passer à l'info suivante
   if (currentTime - lastInfoChange >= INFO_DURATION) {
     lastInfoChange = currentTime;
     currentInfo++;
-    if (currentInfo > 2) currentInfo = 0;  // Boucle : 0, 1, 2, 0, 1, 2...
+    if (currentInfo > 2) currentInfo = 0;
   }
   
-  // Effacer les lignes 2 et 3
-  lcd.setCursor(0, 2); lcd.print("                    ");
-  lcd.setCursor(0, 3); lcd.print("                    ");
-  
-  // Afficher l'info correspondante
-  switch(currentInfo) {
-    case 0:  // RS
-      lcd.setCursor(0, 2);
-      lcd.print("RS (Resistance):");
-      lcd.setCursor(0, 3);
-      lcd.print(rs, 2);
-      lcd.print(" kOhms");
-      break;
-      
-    case 1:  // Ratio
-      lcd.setCursor(0, 2);
-      lcd.print("Ratio RS/Ro:");
-      lcd.setCursor(0, 3);
-      lcd.print(ratio, 2);
-      break;
-      
-    case 2:  // Brut
-      lcd.setCursor(0, 2);
-      lcd.print("Valeur brute ADC:");
-      lcd.setCursor(0, 3);
-      lcd.print(rawValue);
-      break;
+  // N'afficher que si l'info a changé
+  if (lastDisplayedInfo != currentInfo) {
+    // Effacer les lignes 2 et 3 UNE SEULE FOIS
+    lcd.setCursor(0, 2); lcd.print("                    ");
+    lcd.setCursor(0, 3); lcd.print("                    ");
+    
+    // Afficher l'info correspondante
+    switch(currentInfo) {
+      case 0:  // RS
+        lcd.setCursor(0, 2);
+        lcd.print("RS (Resistance):");
+        lcd.setCursor(0, 3);
+        lcd.print(rs, 2);
+        lcd.print(" kOhms");
+        break;
+        
+      case 1:  // Ratio
+        lcd.setCursor(0, 2);
+        lcd.print("Ratio RS/Ro:");
+        lcd.setCursor(0, 3);
+        lcd.print(ratio, 2);
+        break;
+        
+      case 2:  // Brut
+        lcd.setCursor(0, 2);
+        lcd.print("Valeur brute ADC:");
+        lcd.setCursor(0, 3);
+        lcd.print(rawValue);
+        break;
+    }
+    
+    lastDisplayedInfo = currentInfo;
   }
 }
 
