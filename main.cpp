@@ -348,7 +348,9 @@ if (showBigPPM) {
     lcd.setCursor(0, 3); lcd.print("                    ");
     printBigNumber((int)ppm);
     //printBigNumber(3865);
-    // Ajouter "ppm" en petit à droite
+    // Ajouter en petit 
+    lcd.setCursor(0, 3);  // Position à gauche
+    lcd.print("CO :");
     lcd.setCursor(17, 3);  // Position à droite
     lcd.print("ppm");
     lastDisplayedInfo = -2;
@@ -433,10 +435,7 @@ if (showBigPPM) {
     Serial.println(" hPa");
 
     Serial.println();
-    delay(2000);   // 2 s entre deux mesures*/
 
-
-    // Affichage série
     /*Serial.print("MQ7 brut = ");
     Serial.print(rawValue);
     Serial.print("  ~");
