@@ -193,7 +193,7 @@ void setup_wifi() {
 
   // Ajoute ici tous les réseaux possibles
   wifiMulti.addAP("Mounwiff",    "rue_de_la_Grande680Plage_10!");
-  wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
+  //wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
 
   Serial.print("Connexion en cours");
 
