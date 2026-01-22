@@ -235,26 +235,6 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 
-
-// TEST des caractères personnalisés
-lcd.clear();
-lcd.setCursor(0, 0);
-lcd.print("Test caracteres:");
-
-lcd.setCursor(0, 2);
-lcd.write(0);  // topBlock
-lcd.write(1);  // botBlock
-lcd.write(2);  // fullBlock
-
-lcd.setCursor(0, 3);
-lcd.write(3);  // leftTop
-lcd.write(4);  // rightTop
-lcd.write(5);  // leftBot
-lcd.write(6);  // rightBot
-
-delay(5000);  // Afficher pendant 5 secondes
-lcd.clear();
-
   /*********************WIFI/MQTT**************
   // WiFi + MQTT
   setup_wifi();
@@ -345,7 +325,7 @@ void loop() {
     float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
 ////////////////////Ajout pour test//////////////////////////////////////////////
-    lcd.setCursor(10, 1);  lcd.print("rs:");  lcd.print(rs);
+    lcd.setCursor(10, 1);  lcd.print("ppm:");  lcd.print(((int)ppm*100)/100);
 /////////////////////////////////////////////////////////////////////
 
    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
@@ -366,8 +346,11 @@ if (showBigPPM) {
   if (lastDisplayedInfo != -2) {  // -2 = code pour "mode PPM"
     lcd.setCursor(0, 2); lcd.print("                    ");
     lcd.setCursor(0, 3); lcd.print("                    ");
-    //printBigNumber((int)ppm);
-    printBigNumber(3865);
+    printBigNumber((int)ppm);
+    //printBigNumber(3865);
+    // Ajouter "ppm" en petit à droite
+    lcd.setCursor(17, 3);  // Position à droite
+    lcd.print("ppm");
     lastDisplayedInfo = -2;
   }
   
