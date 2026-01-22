@@ -1,6 +1,5 @@
 #include <Arduino.h>
 
-
 #include <LiquidCrystal_I2C.h>
 /*************** a ajouter pour passer au aht/BMP **************
 #include <Wire.h>
