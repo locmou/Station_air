@@ -7,9 +7,9 @@
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_BMP280.h>
 */
-/***************** a ajouter pour le wifi
 #include <WiFi.h>
 #include <WiFiMulti.h>
+/***************** a ajouter pour MQTT
 #include <PubSubClient.h>
 */
 #include "DHTesp.h" 
@@ -68,9 +68,10 @@ const unsigned long INFO_DURATION = 3000;  // 3sec par info
 int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
 int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
 
-/*****************************Congfig wifi********************
 // ---------- OBJET WiFiMulti ----------
 WiFiMulti wifiMulti;
+
+/*****************************Congfig MQTT********************
 
 // ---------- CONFIG MQTT ----------
 const char* mqtt_server = "192.168.1.11"; // IP ou hostname du broker
@@ -179,24 +180,45 @@ void printBigNumber(int number) {
   }
 }
 
-
-/*******************************WIFI/MQTT**********************************
 // ---------- FONCTIONS ----------
 void setup_wifi() {
-  delay(10);
-  WiFi.mode(WIFI_STA);
+
+  Serial.begin(115200);  // Démarrer le port série pour voir les messages
+  delay(1000);
+  
+  Serial.println();
+  Serial.println("=== Connexion WiFi ===");
+
+  WiFi.mode(WIFI_STA); // Mode Station (client WiFi)
 
   // Ajoute ici tous les réseaux possibles
   wifiMulti.addAP("Mounwiff",    "rue_de_la_Grande680Plage_10!");
-  wifiMulti.addAP("SSID_BUREAU", "mdp_bureau");
-  wifiMulti.addAP("SSID_TEL",    "mdp_tel");
+  wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
 
-  // Boucle jusqu'à connexion sur l'un des réseaux
-  while (wifiMulti.run() != WL_CONNECTED) {
+  Serial.print("Connexion en cours");
+
+// Tentative de connexion (timeout 10 secondes)
+  int attempts = 0;
+  while (wifiMulti.run() != WL_CONNECTED && attempts < 20) {
     delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+  // Boucle jusqu'à connexion sur l'un des réseaux
+    if (WiFi.status() == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("WiFi connecté !");
+    Serial.print("Adresse IP : ");
+    Serial.println(WiFi.localIP());
+    Serial.print("SSID : ");
+    Serial.println(WiFi.SSID());
+  } else {
+    Serial.println();
+    Serial.println("Échec de connexion WiFi !");
   }
 }
 
+/*******************************MQTT**********************************
 void reconnect_mqtt() {
   while (!client.connected()) {
     // clientId doit être unique
@@ -209,8 +231,15 @@ void reconnect_mqtt() {
 }
 */
 
-/***********************************VOID SETUP*********************************************** */
+
+/**********************************************************VOID SETUP*********************************************** */
+/**********************************************************VOID SETUP*********************************************** */
+/**********************************************************VOID SETUP*********************************************** */
+/**********************************************************VOID SETUP*********************************************** */
 void setup() {
+
+  // Connexion WiFi
+  setup_wifi();
 
   // Déclaration des broches
   pinMode(BRIGHTNESS_PIN, OUTPUT);
@@ -235,17 +264,9 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 
-  /*********************WIFI/MQTT**************
-  // WiFi + MQTT
-  setup_wifi();
+  /*********************MQTT**************
   client.setServer(mqtt_server, mqtt_port);
  */
-
-  /*démarrage port série
-  Serial.begin(115200);
-  while(!Serial);  // Attendre connexion USB (PC/Mac/Linux)
-  Serial.println("Prêt !");
-  */
 
   /* wire pour le lecteur bmp/aht
   // Init I2C sur les pins ESP32 (21 = SDA, 22 = SCL)
@@ -282,13 +303,14 @@ lcd.createChar(7, block);
     Adafruit_BMP280::STANDBY_MS_500
   );
   */
-
-
-  
 } 
 
-/*********************************************VOID LOOP ************************************************ */
 
+
+/*********************************************LOOP ************************************************ */
+/*********************************************LOOP ************************************************ */
+/*********************************************LOOP ************************************************ */
+/*********************************************LOOP ************************************************ */
 void loop() {
 
   unsigned long now = millis();
