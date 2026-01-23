@@ -181,9 +181,6 @@ void printBigNumber(int number) {
 
 // ---------- FONCTIONS ----------
 void setup_wifi() {
-
-  Serial.begin(115200);  // Démarrer le port série pour voir les messages
-  delay(1000);
   
   Serial.println();
   Serial.println("=== Connexion WiFi ===");
@@ -236,6 +233,9 @@ void reconnect_mqtt() {
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
 void setup() {
+
+  Serial.begin(115200);  // Démarrer le port série pour voir les messages
+  delay(1000);
 
   // Connexion WiFi
   setup_wifi();
