@@ -8,9 +8,8 @@
 */
 #include <WiFi.h>
 #include <WiFiMulti.h>
-/***************** a ajouter pour MQTT
 #include <PubSubClient.h>
-*/
+
 #include "DHTesp.h" 
 
 /*************** a ajouter pour passer au aht/BMP **************
@@ -70,8 +69,6 @@ int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
 // ---------- OBJET WiFiMulti ----------
 WiFiMulti wifiMulti;
 
-/*****************************Congfig MQTT********************
-
 // ---------- CONFIG MQTT ----------
 const char* mqtt_server = "192.168.1.11"; // IP ou hostname du broker
 const int   mqtt_port   = 1883;
@@ -81,7 +78,7 @@ const char* mqtt_pass = "vgo:?2258H";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-*/
+
 
 /**********************************VOID RETROECLAIRAGE*************************************** */
 void Retroeclairage(){
@@ -214,6 +211,28 @@ void setup_wifi() {
   }
 }
 
+void reconnect_mqtt() {
+  // Boucle jusqu'à connexion MQTT
+  while (!client.connected()) {
+    Serial.print("Connexion au broker MQTT...");
+    
+    // Tentative de connexion (clientId doit être unique)
+    String clientId = "ESP32_MQ7_";
+    clientId += String(random(0xffff), HEX);  // ID aléatoire
+    
+    if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
+      Serial.println(" Connecté !");
+      Serial.print("Client ID : ");
+      Serial.println(clientId);
+    } else {
+      Serial.print(" Échec, code erreur : ");
+      Serial.print(client.state());
+      Serial.println(" | Nouvelle tentative dans 5s...");
+      delay(5000);
+    }
+  }
+}
+
 /*******************************MQTT**********************************
 void reconnect_mqtt() {
   while (!client.connected()) {
@@ -240,6 +259,12 @@ void setup() {
   // Connexion WiFi
   setup_wifi();
 
+
+  // Configuration MQTT
+  client.setServer(mqtt_server, mqtt_port);
+  Serial.println("Configuration MQTT terminée");
+
+
   // Déclaration des broches
   pinMode(BRIGHTNESS_PIN, OUTPUT);
   pinMode(LDR, INPUT);
@@ -262,10 +287,6 @@ lcd.createChar(4, LB);
 lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
-
-  /*********************MQTT**************
-  client.setServer(mqtt_server, mqtt_port);
- */
 
   /* wire pour le lecteur bmp/aht
   // Init I2C sur les pins ESP32 (21 = SDA, 22 = SCL)
@@ -311,7 +332,13 @@ lcd.createChar(7, block);
 /*********************************************LOOP ************************************************ */
 /*********************************************LOOP ************************************************ */
 void loop() {
-
+  
+  // Vérifier et maintenir la connexion MQTT
+  if (!client.connected()) {
+    reconnect_mqtt();
+  }
+  client.loop();  // Nécessaire pour maintenir la connexion
+  
   unsigned long now = millis();
   if (now - lastMeasure > MESURE_INTERVAL) {
     lastMeasure = now;
