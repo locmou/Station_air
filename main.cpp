@@ -1,11 +1,11 @@
 #include <Arduino.h>
 
 #include <LiquidCrystal_I2C.h>
-/*************** a ajouter pour passer au aht/BMP **************
+
 #include <Wire.h>
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_BMP280.h>
-*/
+
 #include <WiFi.h>
 #include <WiFiMulti.h>
 /***************** a ajouter pour MQTT
@@ -13,20 +13,20 @@
 */
 #include "DHTesp.h" 
 
-/*************** a ajouter pour passer au aht/BMP **************
 // Objets capteurs
 Adafruit_AHTX0 aht;
 Adafruit_BMP280 bmp;   // I2C
-*/
 
-/** Initialize DHT sensor 1 */
+/** Initialize DHT sensor 1 
 DHTesp dhtSensor;
+*/
 
 // ---------- CONFIG LCD ----------
 LiquidCrystal_I2C lcd(0x27, 20, 4); // Adapter l'adresse I2C (0x27 ou 0x3F)
 
-/** Pin number for DHT11 1 data pin */
+/** Pin number for DHT11 1 data pin 
 #define dhtPin 32
+*/
 
 //Définition des contrastes
 #define BRIGHTNESS_PIN 5   // Must be a PWM pin
@@ -249,9 +249,10 @@ void setup() {
   lcd.backlight();
   lcd.clear();
 
-// Initialize temperature sensor 1
-  dhtSensor.setup(dhtPin, DHTesp::DHT11);
 
+/*/ Initialize temperature sensor 1
+  dhtSensor.setup(dhtPin, DHTesp::DHT11);
+*/
 
   // Créer les caractères personnalisés
 lcd.createChar(0, LT);
@@ -273,7 +274,7 @@ lcd.createChar(7, block);
   Serial.println("Init AHT20 + BMP280");
   */
 
-  /***** a ajouter pour passer au aht/BMP **************
+  
 
   // --- AHT20 ---
   if (!aht.begin()) {          // auto‑détection AHT10/AHT20 à l'adresse I2C 0x38[web:2]
@@ -301,7 +302,7 @@ lcd.createChar(7, block);
     Adafruit_BMP280::FILTER_X16,
     Adafruit_BMP280::STANDBY_MS_500
   );
-  */
+  
 } 
 
 
@@ -319,21 +320,24 @@ void loop() {
     // réglage led rétroéclairage
     Retroeclairage();
 
+    // ----- Lecture AHT20 -----
+    sensors_event_t humid, tempAHT;
+    aht.getEvent(&humid, &tempAHT);   // remplit tempAHT.temperature et humid.relative_humidity[web:2]
+
+    // ----- Lecture BMP280 -----
+    float tempBMP  = bmp.readTemperature();   // °C[web:1]
+    float press_hPa = bmp.readPressure() / 100.0F;  // hPa[web:1]
+
+    
+/*
     // Lecture des données du capteur
     TempAndHumidity data = dhtSensor.getTempAndHumidity();
+*/
 
-    /*
-    // Affichage sur le moniteur série
-    Serial.print("Température: ");
-    Serial.print(data.temperature, 1);
-    Serial.print("°C, Humidité: ");
-    Serial.print(data.humidity, 1);
-    Serial.println("%");
-    */
 
     // Affichage sur le LCD
-    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(data.temperature, 1);  lcd.print(" C");
-    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(data.humidity, 1);  lcd.print(" %");
+    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT, 1);  lcd.print(" C");
+    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid, 1);  lcd.print(" %");
 
     // Affichage bright 
     lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
@@ -425,20 +429,6 @@ if (showBigPPM) {
   // Petit délai pour éviter de surcharger le LCD
   delay(500);
 
-    /************* a ajouter pour passer au aht/BMP **************
-    /*  // ----- Lecture AHT20 -----
-    sensors_event_t humid, tempAHT;
-    aht.getEvent(&humid, &tempAHT);   // remplit tempAHT.temperature et humid.relative_humidity[web:2]
-
-    // ----- Lecture BMP280 -----
-    float tempBMP  = bmp.readTemperature();   // °C[web:1]
-    float press_hPa = bmp.readPressure() / 100.0F;  // hPa[web:1]
-
-    // ----- Affichage -----
-    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT.temperature);  lcd.print(" C");
-    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid.relative_humidity);  lcd.print(" %");
-    lcd.setCursor(0, 1);  lcd.print("Press:");  lcd.print(press_hPa);  lcd.print(" hPa");
-    lcd.setCursor(10, 1);  lcd.print("Bright:");  lcd.print(bright);  
 
 
     //---------Affichagesérie--------
@@ -463,11 +453,7 @@ if (showBigPPM) {
     Serial.print(pseudoPPM);
     Serial.println(" ppm (approx)");*/
 
-/*
-    lcd.setCursor(0, 3);
-    lcd.print("WiFi: ");
-    lcd.print(WiFi.SSID());
-*/
+
 /*********************pUBLI mqtt**************************
     // Publication MQTT (envoi de la valeur brute)
     char payload[32];
