@@ -334,13 +334,30 @@ void loop() {
     TempAndHumidity data = dhtSensor.getTempAndHumidity();
 */
 
+    //---------Affichagesérie--------
+    Serial.println("===== Mesures =====");
+    Serial.print("AHT20  - T: ");
+    Serial.print(tempAHT.temperature,1);
+    Serial.print(" °C  |  RH: ");
+    Serial.print(humid.relative_humidity);
+    Serial.println(" %");
+
+    Serial.print("BMP280 - T: ");
+    Serial.print(tempBMP);
+    Serial.print(" °C  |  P: ");
+    Serial.print(press_hPa);
+    Serial.println(" hPa");
+
+    Serial.println();
 
     // Affichage sur le LCD
-    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT, 1);  lcd.print(" C");
-    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid, 1);  lcd.print(" %");
-
+    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT.temperature,1);  lcd.print("C");
+    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid.relative_humidity, 1);  lcd.print(" %");
     // Affichage bright 
     lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
+    ////////////////////Ajout pour test//////////////////////////////////////////////
+    lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print(press_hPa); lcd.print("hPa");
+/////////////////////////////////////////////////////////////////////
    }
 
     // Lecture du MQ-7 avec calcul calibré
@@ -349,9 +366,7 @@ void loop() {
     float ratio = rs / Ro;            // Calcul du ratio RS/Ro
     float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
-////////////////////Ajout pour test//////////////////////////////////////////////
-    lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print((press_hPa); lcd.print("hPa");
-/////////////////////////////////////////////////////////////////////
+
 
    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
     unsigned long currentTime = millis();
@@ -427,25 +442,10 @@ if (showBigPPM) {
 }
 
   // Petit délai pour éviter de surcharger le LCD
-  delay(500);
+  delay(100);
 
 
 
-    //---------Affichagesérie--------
-    Serial.println("===== Mesures =====");
-    Serial.print("AHT20  - T: ");
-    Serial.print(tempAHT.temperature);
-    Serial.print(" °C  |  RH: ");
-    Serial.print(humid.relative_humidity);
-    Serial.println(" %");
-
-    Serial.print("BMP280 - T: ");
-    Serial.print(tempBMP);
-    Serial.print(" °C  |  P: ");
-    Serial.print(press_hPa);
-    Serial.println(" hPa");
-
-    Serial.println();
 
     /*Serial.print("MQ7 brut = ");
     Serial.print(rawValue);
