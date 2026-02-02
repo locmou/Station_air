@@ -350,7 +350,7 @@ void loop() {
     float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
 ////////////////////Ajout pour test//////////////////////////////////////////////
-    lcd.setCursor(10, 1);  lcd.print("ppm:");  lcd.print(((int)ppm*100)/100);
+    lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print((press_hPa); lcd.print("hPa");
 /////////////////////////////////////////////////////////////////////
 
    // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
