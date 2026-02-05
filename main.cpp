@@ -62,14 +62,30 @@ int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
 WiFiMulti wifiMulti;
 
 // ---------- CONFIG MQTT ----------
-const char* mqtt_server = "192.168.1.11"; // IP ou hostname du broker
+const char* mqtt_server = "192.168.1.11";
 const int   mqtt_port   = 1883;
-const char* mqtt_topic  = "maison/co/mq7";
 const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
 
+// Device ID unique
+const char* device_id = "stationair";
+
+// Topics de configuration (Discovery)
+const char* discovery_temp = "homeassistant/sensor/stationair/temperature/config";
+const char* discovery_hum = "homeassistant/sensor/stationair/humidity/config";
+const char* discovery_co = "homeassistant/sensor/stationair/co/config";
+const char* discovery_pressure = "homeassistant/sensor/stationair/pressure/config";
+
+// Topics d'état (données)
+const char* state_temp = "homeassistant/sensor/stationair/temperature/state";
+const char* state_hum = "homeassistant/sensor/stationair/humidity/state";
+const char* state_co = "homeassistant/sensor/stationair/co/state";
+const char* state_pressure = "homeassistant/sensor/stationair/pressure/state";
+
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -207,19 +223,103 @@ void setup_wifi() {
   }
 }
 
+void publishMQTTDiscovery() {
+  Serial.println("=== Publication MQTT Discovery ===");
+  
+  // Configuration Température
+  const char* config_temp = 
+    "{"
+    "\"name\":\"Temperature\","
+    "\"device_class\":\"temperature\","
+    "\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\","
+    "\"unit_of_measurement\":\"°C\","
+    "\"value_template\":\"{{ value }}\","
+    "\"unique_id\":\"stationair_temp\","
+    "\"device\":{"
+      "\"identifiers\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"model\":\"ESP32 MQ7\","
+      "\"manufacturer\":\"DIY\""
+    "}"
+    "}";
+  client.publish(discovery_temp, config_temp, true);
+  Serial.println("✓ Température configurée");
+  
+  // Configuration Humidité
+  const char* config_hum = 
+    "{"
+    "\"name\":\"Humidite\","
+    "\"device_class\":\"humidity\","
+    "\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\","
+    "\"unit_of_measurement\":\"%\","
+    "\"value_template\":\"{{ value }}\","
+    "\"unique_id\":\"stationair_hum\","
+    "\"device\":{"
+      "\"identifiers\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"model\":\"ESP32 MQ7\","
+      "\"manufacturer\":\"DIY\""
+    "}"
+    "}";
+  client.publish(discovery_hum, config_hum, true);
+  Serial.println("✓ Humidité configurée");
+  
+  // Configuration CO
+  const char* config_co = 
+    "{"
+    "\"name\":\"CO\","
+    "\"state_topic\":\"homeassistant/sensor/stationair/co/state\","
+    "\"unit_of_measurement\":\"ppm\","
+    "\"icon\":\"mdi:molecule-co\","
+    "\"value_template\":\"{{ value }}\","
+    "\"unique_id\":\"stationair_co\","
+    "\"device\":{"
+      "\"identifiers\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"model\":\"ESP32 MQ7\","
+      "\"manufacturer\":\"DIY\""
+    "}"
+    "}";
+  client.publish(discovery_co, config_co, true);
+  Serial.println("✓ CO configuré");
+  
+  // Configuration Pression
+  const char* config_pressure = 
+    "{"
+    "\"name\":\"Pression\","
+    "\"device_class\":\"pressure\","
+    "\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\","
+    "\"unit_of_measurement\":\"hPa\","
+    "\"value_template\":\"{{ value }}\","
+    "\"unique_id\":\"stationair_pressure\","
+    "\"device\":{"
+      "\"identifiers\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"model\":\"ESP32 MQ7\","
+      "\"manufacturer\":\"DIY\""
+    "}"
+    "}";
+  client.publish(discovery_pressure, config_pressure, true);
+  Serial.println("✓ Pression configurée");
+  
+  Serial.println("=== Discovery terminé ===");
+}
+
 void reconnect_mqtt() {
-  // Boucle jusqu'à connexion MQTT
   while (!client.connected()) {
     Serial.print("Connexion au broker MQTT...");
     
-    // Tentative de connexion (clientId doit être unique)
-    String clientId = "ESP32_MQ7_";
-    clientId += String(random(0xffff), HEX);  // ID aléatoire
+    String clientId = "ESP32_StationAir_";
+    clientId += String(random(0xffff), HEX);
     
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
       Serial.println(" Connecté !");
       Serial.print("Client ID : ");
       Serial.println(clientId);
+      
+      // Publier la configuration Discovery
+      publishMQTTDiscovery();
+      
     } else {
       Serial.print(" Échec, code erreur : ");
       Serial.print(client.state());
@@ -229,6 +329,28 @@ void reconnect_mqtt() {
   }
 }
 
+
+void publishSensorData(float temperature, float humidity, float co_ppm, float pressure) {
+  char payload[10];
+  
+  // Température
+  dtostrf(temperature, 4, 1, payload);
+  client.publish(state_temp, payload);
+  
+  // Humidité
+  dtostrf(humidity, 4, 1, payload);
+  client.publish(state_hum, payload);
+  
+  // CO
+  dtostrf(co_ppm, 5, 1, payload);
+  client.publish(state_co, payload);
+  
+  // Pression
+  dtostrf(pressure, 6, 1, payload);
+  client.publish(state_pressure, payload);
+  
+  Serial.println("✓ Données MQTT publiées");
+}
 
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
@@ -331,6 +453,12 @@ void loop() {
     float tempBMP  = bmp.readTemperature();   // °C[web:1]
     float press_hPa = bmp.readPressure() / 100.0F;  // hPa[web:1]
 
+    // Lecture du MQ-7 avec calcul calibré
+    int rawValue = analogRead(MQ7_PIN);
+    float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
+    float ratio = rs / Ro;            // Calcul du ratio RS/Ro
+    float ppm = calculatePPM(ratio);  // Conversion en PPM réels
+
     //---------Affichagesérie--------
     Serial.println("===== Mesures =====");
     Serial.print("AHT20  - T: ");
@@ -353,23 +481,17 @@ void loop() {
     // Affichage bright 
     lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
     lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print(press_hPa); lcd.print("hPa");
-  }
 
-  // Lecture du MQ-7 avec calcul calibré
-  int rawValue = analogRead(MQ7_PIN);
-  float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
-  float ratio = rs / Ro;            // Calcul du ratio RS/Ro
-  float ppm = calculatePPM(ratio);  // Conversion en PPM réels
+     // Publication MQTT
+    publishSensorData(tempAHT.temperature, humid.relative_humidity, ppm, press_hPa);
+  
 
-  // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
-  unsigned long currentTime = millis();
 
-  // Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
-  if (currentTime - lastDisplayChange >= DISPLAY_DURATION) {
-    lastDisplayChange = currentTime;
+  if (now - lastDisplayChange >= DISPLAY_DURATION) {
+    lastDisplayChange = now;
     showBigPPM = !showBigPPM;  // Inverse le mode
     currentInfo = 0;  // Réinitialise l'info à afficher
-    lastInfoChange = currentTime;
+    lastInfoChange = now;
   }
 
   // ========== AFFICHAGE SELON LE MODE ==========
@@ -392,8 +514,8 @@ void loop() {
     // MODE 2 : Défilement des infos
     
     // Vérifier si on doit passer à l'info suivante
-    if (currentTime - lastInfoChange >= INFO_DURATION) {
-      lastInfoChange = currentTime;
+    if (now - lastInfoChange >= INFO_DURATION) {
+      lastInfoChange = now;
       currentInfo++;
       if (currentInfo > 2) currentInfo = 0;
     }
@@ -432,7 +554,7 @@ void loop() {
       lastDisplayedInfo = currentInfo;
     }
   }
-
+  }
   // Petit délai pour éviter de surcharger le LCD
   delay(100);
 
