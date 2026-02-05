@@ -555,3 +555,77 @@ void loop() {
   delay(100);
   
 } // FIN du loop
+
+/*
+Message 15 reçu sur homeassistant/sensor/stationair/pressure/state à 16:33 :
+974
+QoS: 0 - Retain: false
+Message 14 reçu sur homeassistant/sensor/stationair/co/state à 16:33 :
+0
+QoS: 0 - Retain: false
+Message 13 reçu sur homeassistant/sensor/stationair/humidity/state à 16:33 :
+47.8
+QoS: 0 - Retain: false
+Message 12 reçu sur homeassistant/sensor/stationair/temperature/state à 16:33 :
+20.8
+QoS: 0 - Retain: false
+Message 11 reçu sur homeassistant/Rennes_Ballon_Evier_state à 16:33 :
+{
+    "PuissanceS_M": 449,
+    "PuissanceI_M": 0,
+    "Tension_M": 0,
+    "Intensite_M": 0,
+    "PowerFactor_M": 0,
+    "Energie_M_Soutiree": 89804,
+    "Energie_M_Injectee": 19,
+    "EnergieJour_M_Soutiree": 6945,
+    "EnergieJour_M_Injectee": 0,
+    "Ouverture_Relais_1": 0,
+    "Actif_Relais_1": 0,
+    "Duree_Relais_1": 1.209852,
+    "Force_OnOff_Relais_1": 0
+}
+QoS: 0 - Retain: false
+Message 10 reçu sur homeassistant/sensor/stationair/pressure/state à 16:33 :
+974
+QoS: 0 - Retain: false
+Message 9 reçu sur homeassistant/sensor/stationair/co/state à 16:33 :
+0
+QoS: 0 - Retain: false
+Message 8 reçu sur homeassistant/sensor/stationair/humidity/state à 16:33 :
+47.8
+QoS: 0 - Retain: false
+Message 7 reçu sur homeassistant/sensor/stationair/temperature/state à 16:33 :
+20.8
+QoS: 0 - Retain: false
+Message 6 reçu sur homeassistant/Routeur_Solaire_state à 16:33 :
+{
+    "PuissanceS_M": 453,
+    "PuissanceI_M": 0,
+    "Tension_M": 241,
+    "Intensite_M": 2,
+    "PowerFactor_M": 0.93,
+    "Energie_M_Soutiree": 89804,
+    "Energie_M_Injectee": 19,
+    "EnergieJour_M_Soutiree": 6945,
+    "EnergieJour_M_Injectee": 0
+}
+QoS: 0 - Retain: false
+Message 5 reçu sur homeassistant/sensor/stationair/pressure/state à 16:33 :
+974
+QoS: 0 - Retain: false
+Message 4 reçu sur homeassistant/sensor/stationair/co/state à 16:33 :
+0
+QoS: 0 - Retain: false
+Message 3 reçu sur homeassistant/sensor/stationair/humidity/state à 16:33 :
+47.8
+QoS: 0 - Retain: false
+Message 2 reçu sur homeassistant/sensor/stationair/temperature/state à 16:33 :
+20.8
+QoS: 0 - Retain: false
+Message 1 reçu sur homeassistant/Rennes_Ballon_Evier/Available à 16:33 :
+online
+QoS: 0 - Retain: true
+Message 0 reçu sur homeassistant/Routeur_Solaire/Available à 16:33 :
+online
+QoS: 0 - Retain: true*/
