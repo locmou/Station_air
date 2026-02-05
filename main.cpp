@@ -9,7 +9,7 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <PubSubClient.h>
-
+#define MQTT_MAX_PACKET_SIZE 512
 #include "DHTesp.h" 
 
 // Objets capteurs
@@ -66,6 +66,7 @@ const char* mqtt_server = "192.168.1.11";
 const int   mqtt_port   = 1883;
 const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
+bool discoveryPublished = false;
 
 // Device ID unique
 const char* device_id = "stationair";
@@ -312,16 +313,19 @@ void reconnect_mqtt() {
     String clientId = "ESP32_StationAir_";
     clientId += String(random(0xffff), HEX);
     
-    // Configurer le keepalive AVANT la connexion
-    client.setKeepAlive(60);  // 60 secondes
-    
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
       Serial.println(" Connecté !");
       Serial.print("Client ID : ");
       Serial.println(clientId);
       
-      // Publier la configuration Discovery
-      publishMQTTDiscovery();
+      // Attendre un peu pour que la connexion soit stable
+      delay(500);
+      
+      // Publier Discovery seulement si pas déjà fait
+      if (!discoveryPublished) {
+        publishMQTTDiscovery();
+        discoveryPublished = true;
+      }
       
     } else {
       Serial.print(" Échec, code erreur : ");
@@ -440,6 +444,14 @@ void loop() {
     reconnect_mqtt();
   }
   client.loop();  // ✅ Appel régulier pour garder la connexion
+
+  // TEST : Republier Discovery après 30 secondes (pour debug)
+  static bool testDiscovery = false;
+  if (!testDiscovery && millis() > 30000) {  // Après 30 secondes
+    Serial.println("=== TEST : Republication Discovery ===");
+    publishMQTTDiscovery();
+    testDiscovery = true;
+  }
     
   unsigned long now = millis();
   
