@@ -312,6 +312,9 @@ void reconnect_mqtt() {
     String clientId = "ESP32_StationAir_";
     clientId += String(random(0xffff), HEX);
     
+    // Configurer le keepalive AVANT la connexion
+    client.setKeepAlive(60);  // 60 secondes
+    
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
       Serial.println(" Connecté !");
       Serial.print("Client ID : ");
@@ -328,7 +331,6 @@ void reconnect_mqtt() {
     }
   }
 }
-
 
 void publishSensorData(float temperature, float humidity, float co_ppm, float pressure) {
   char payload[10];
@@ -367,8 +369,9 @@ void setup() {
 
   // Configuration MQTT
   client.setServer(mqtt_server, mqtt_port);
+  client.setKeepAlive(60);        // ← AJOUTEZ CETTE LIGNE
+  client.setSocketTimeout(30);    // ← Et celle-ci pour le timeout de socket
   Serial.println("Configuration MQTT terminée");
-
 
   // Déclaration des broches
   pinMode(BRIGHTNESS_PIN, OUTPUT);
@@ -432,130 +435,111 @@ void setup() {
 
 void loop() {
   
-  // Vérifier et maintenir la connexion MQTT
+  // ========== MAINTIEN CONNEXION MQTT (TOUJOURS EN PREMIER) ==========
   if (!client.connected()) {
     reconnect_mqtt();
   }
-  client.loop();  // Nécessaire pour maintenir la connexion
+  client.loop();  // ✅ Appel régulier pour garder la connexion
     
   unsigned long now = millis();
+  
+  // ========== MESURES PÉRIODIQUES (toutes les 10 secondes) ==========
   if (now - lastMeasure > MESURE_INTERVAL) {
     lastMeasure = now;
 
-    // réglage led rétroéclairage
+    // Réglage LED rétroéclairage
     Retroeclairage();
 
-    // ----- Lecture AHT20 -----
+    // Lecture AHT20
     sensors_event_t humid, tempAHT;
-    aht.getEvent(&humid, &tempAHT);   // remplit tempAHT.temperature et humid.relative_humidity[web:2]
+    aht.getEvent(&humid, &tempAHT);
 
-    // ----- Lecture BMP280 -----
-    float tempBMP  = bmp.readTemperature();   // °C[web:1]
-    float press_hPa = bmp.readPressure() / 100.0F;  // hPa[web:1]
+    // Lecture BMP280
+    float tempBMP = bmp.readTemperature();
+    float press_hPa = bmp.readPressure() / 100.0F;
 
-    // Lecture du MQ-7 avec calcul calibré
+    // Lecture MQ-7
     int rawValue = analogRead(MQ7_PIN);
-    float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
-    float ratio = rs / Ro;            // Calcul du ratio RS/Ro
-    float ppm = calculatePPM(ratio);  // Conversion en PPM réels
+    float rs = readRS(rawValue);
+    float ratio = rs / Ro;
+    float ppm = calculatePPM(ratio);
 
-    //---------Affichagesérie--------
+    // Affichage série
     Serial.println("===== Mesures =====");
-    Serial.print("AHT20  - T: ");
-    Serial.print(tempAHT.temperature,1);
-    Serial.print(" °C  |  RH: ");
-    Serial.print(humid.relative_humidity);
-    Serial.println(" %");
-
-    Serial.print("BMP280 - T: ");
-    Serial.print(tempBMP);
-    Serial.print(" °C  |  P: ");
-    Serial.print(press_hPa);
-    Serial.println(" hPa");
-
+    Serial.print("AHT20  - T: "); Serial.print(tempAHT.temperature, 1);
+    Serial.print(" °C  |  RH: "); Serial.println(humid.relative_humidity);
+    Serial.print("BMP280 - T: "); Serial.print(tempBMP);
+    Serial.print(" °C  |  P: "); Serial.println(press_hPa);
     Serial.println();
 
-    // Affichage sur le LCD
-    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT.temperature,1);  lcd.print("C");
-    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid.relative_humidity, 1);  lcd.print(" %");
-    // Affichage bright 
-    lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
-    lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print(press_hPa); lcd.print("hPa");
+    // Affichage LCD lignes 0 et 1
+    lcd.setCursor(0, 0); lcd.print("Tmp:"); lcd.print(tempAHT.temperature, 1); lcd.print("C ");
+    lcd.setCursor(10, 0); lcd.print("Hum:"); lcd.print(humid.relative_humidity, 1); lcd.print("% ");
+    lcd.setCursor(0, 1); lcd.print("Brgt:"); lcd.print(bright); lcd.print("   ");
+    lcd.setCursor(10, 1); lcd.print("P:"); lcd.print(press_hPa, 0); lcd.print("hPa");
 
-     // Publication MQTT
+    // ========== PUBLICATION MQTT ==========
     publishSensorData(tempAHT.temperature, humid.relative_humidity, ppm, press_hPa);
-  
+    
+  } // ✅ FIN du IF des mesures périodiques
 
+  // ========== GESTION AFFICHAGE (en continu) ==========
+  // Relecture MQ7 pour affichage en temps réel
+  int rawValue = analogRead(MQ7_PIN);
+  float rs = readRS(rawValue);
+  float ratio = rs / Ro;
+  float ppm = calculatePPM(ratio);
 
+  // Alternance d'affichage
   if (now - lastDisplayChange >= DISPLAY_DURATION) {
     lastDisplayChange = now;
-    showBigPPM = !showBigPPM;  // Inverse le mode
-    currentInfo = 0;  // Réinitialise l'info à afficher
+    showBigPPM = !showBigPPM;
+    currentInfo = 0;
     lastInfoChange = now;
   }
 
-  // ========== AFFICHAGE SELON LE MODE ==========
+  // Affichage selon le mode
   if (showBigPPM) {
-    // MODE 1 : Affichage PPM en gros
-    if (lastDisplayedInfo != -2) {  // -2 = code pour "mode PPM"
+    if (lastDisplayedInfo != -2) {
       lcd.setCursor(0, 2); lcd.print("                    ");
       lcd.setCursor(0, 3); lcd.print("                    ");
       printBigNumber((int)ppm);
-      //printBigNumber(3865);
-      // Ajouter en petit 
-      lcd.setCursor(0, 3);  // Position à gauche
-      lcd.print("CO :");
-      lcd.setCursor(17, 3);  // Position à droite
-      lcd.print("ppm");
+      lcd.setCursor(0, 3); lcd.print("CO :");
+      lcd.setCursor(17, 3); lcd.print("ppm");
       lastDisplayedInfo = -2;
     }
     
   } else {
-    // MODE 2 : Défilement des infos
-    
-    // Vérifier si on doit passer à l'info suivante
+    // Défilement des infos
     if (now - lastInfoChange >= INFO_DURATION) {
       lastInfoChange = now;
       currentInfo++;
       if (currentInfo > 2) currentInfo = 0;
     }
     
-    // N'afficher que si l'info a changé
     if (lastDisplayedInfo != currentInfo) {
-      // Effacer les lignes 2 et 3 UNE SEULE FOIS
       lcd.setCursor(0, 2); lcd.print("                    ");
       lcd.setCursor(0, 3); lcd.print("                    ");
       
-      // Afficher l'info correspondante
       switch(currentInfo) {
-        case 0:  // RS
-          lcd.setCursor(0, 2);
-          lcd.print("RS (Resistance):");
-          lcd.setCursor(0, 3);
-          lcd.print(rs, 2);
-          lcd.print(" kOhms");
+        case 0:
+          lcd.setCursor(0, 2); lcd.print("RS (Resistance):");
+          lcd.setCursor(0, 3); lcd.print(rs, 2); lcd.print(" kOhms");
           break;
-          
-        case 1:  // Ratio
-          lcd.setCursor(0, 2);
-          lcd.print("Ratio RS/Ro:");
-          lcd.setCursor(0, 3);
-          lcd.print(ratio, 2);
+        case 1:
+          lcd.setCursor(0, 2); lcd.print("Ratio RS/Ro:");
+          lcd.setCursor(0, 3); lcd.print(ratio, 2);
           break;
-          
-        case 2:  // Brut
-          lcd.setCursor(0, 2);
-          lcd.print("Valeur brute ADC:");
-          lcd.setCursor(0, 3);
-          lcd.print(rawValue);
+        case 2:
+          lcd.setCursor(0, 2); lcd.print("Valeur brute ADC:");
+          lcd.setCursor(0, 3); lcd.print(rawValue);
           break;
       }
-      
       lastDisplayedInfo = currentInfo;
     }
   }
-  }
-  // Petit délai pour éviter de surcharger le LCD
-  delay(100);
 
-}
+  // Petit délai
+  delay(100);
+  
+} // FIN du loop
