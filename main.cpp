@@ -233,19 +233,6 @@ void reconnect_mqtt() {
   }
 }
 
-/*******************************MQTT**********************************
-void reconnect_mqtt() {
-  while (!client.connected()) {
-    // clientId doit être unique
-    if (client.connect("ESP32_MQ7", mqtt_user, mqtt_pass)) {
-      // connecté
-    } else {
-      delay(2000);
-    }
-  }
-}
-*/
-
 
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
@@ -253,33 +240,28 @@ void reconnect_mqtt() {
 /**********************************************************VOID SETUP*********************************************** */
 void setup() {
 
-  Serial.begin(115200);  // Démarrer le port série pour voir les messages
-  delay(1000);
+Serial.begin(115200);  // Démarrer le port série pour voir les messages
+delay(1000);
 
-  // Connexion WiFi
-  setup_wifi();
-
-
-  // Configuration MQTT
-  client.setServer(mqtt_server, mqtt_port);
-  Serial.println("Configuration MQTT terminée");
+// Connexion WiFi
+setup_wifi();
 
 
-  // Déclaration des broches
-  pinMode(BRIGHTNESS_PIN, OUTPUT);
-  pinMode(LDR, INPUT);
+// Configuration MQTT
+client.setServer(mqtt_server, mqtt_port);
+Serial.println("Configuration MQTT terminée");
+
+
+// Déclaration des broches
+pinMode(BRIGHTNESS_PIN, OUTPUT);
+pinMode(LDR, INPUT);
 
 // LCD
-  lcd.init();
-  lcd.backlight();
-  lcd.clear();
+lcd.init();
+lcd.backlight();
+lcd.clear();
 
-
-/*/ Initialize temperature sensor 1
-  dhtSensor.setup(dhtPin, DHTesp::DHT11);
-*/
-
-  // Créer les caractères personnalisés
+// Créer les caractères personnalisés
 lcd.createChar(0, LT);
 lcd.createChar(1, UB);
 lcd.createChar(2, RT);
@@ -289,40 +271,37 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 
-  /* wire pour le lecteur bmp/aht
-  // Init I2C sur les pins ESP32 (21 = SDA, 22 = SCL)
-  Wire.begin(21, 22);
-  Serial.println("Init AHT20 + BMP280");
-  */
+// Init I2C sur les pins ESP32 (21 = SDA, 22 = SCL)
+Wire.begin(21, 22);
+Serial.println("Init AHT20 + BMP280");
 
-  
 
-  // --- AHT20 ---
-  if (!aht.begin()) {          // auto‑détection AHT10/AHT20 à l'adresse I2C 0x38[web:2]
-    Serial.println("Erreur: AHT20 non detecte, verifier le cablage !");
+// --- AHT20 ---
+if (!aht.begin()) {          // auto‑détection AHT10/AHT20 à l'adresse I2C 0x38[web:2]
+Serial.println("Erreur: AHT20 non detecte, verifier le cablage !");
+while (1) delay(10);
+}
+Serial.println("AHT20 OK");
+
+// --- BMP280 ---
+// Adresse I2C la plus fréquente : 0x76 ; si échec, essayer 0x77[web:1][web:3]
+if (!bmp.begin(0x76)) {
+  Serial.println("BMP280 0x76 non detecte, essai 0x77...");
+  if (!bmp.begin(0x77)) {
+    Serial.println("Erreur: BMP280 non detecte, verifier le cablage/adresse !");
     while (1) delay(10);
   }
-  Serial.println("AHT20 OK");
+}
+Serial.println("BMP280 OK");
 
-  // --- BMP280 ---
-  // Adresse I2C la plus fréquente : 0x76 ; si échec, essayer 0x77[web:1][web:3]
-  if (!bmp.begin(0x76)) {
-    Serial.println("BMP280 0x76 non detecte, essai 0x77...");
-    if (!bmp.begin(0x77)) {
-      Serial.println("Erreur: BMP280 non detecte, verifier le cablage/adresse !");
-      while (1) delay(10);
-    }
-  }
-  Serial.println("BMP280 OK");
-
-  // Configuration BMP280 (exemple de réglages "classiques")[web:1]
-  bmp.setSampling(
-    Adafruit_BMP280::MODE_NORMAL,
-    Adafruit_BMP280::SAMPLING_X2,   // temp
-    Adafruit_BMP280::SAMPLING_X16,  // pression
-    Adafruit_BMP280::FILTER_X16,
-    Adafruit_BMP280::STANDBY_MS_500
-  );
+// Configuration BMP280 (exemple de réglages "classiques")[web:1]
+bmp.setSampling(
+  Adafruit_BMP280::MODE_NORMAL,
+  Adafruit_BMP280::SAMPLING_X2,   // temp
+  Adafruit_BMP280::SAMPLING_X16,  // pression
+  Adafruit_BMP280::FILTER_X16,
+  Adafruit_BMP280::STANDBY_MS_500
+);
   
 } 
 
@@ -332,80 +311,70 @@ lcd.createChar(7, block);
 /*********************************************LOOP ************************************************ */
 /*********************************************LOOP ************************************************ */
 /*********************************************LOOP ************************************************ */
+
 void loop() {
   
-  // Vérifier et maintenir la connexion MQTT
-  if (!client.connected()) {
-    reconnect_mqtt();
-  }
-  client.loop();  // Nécessaire pour maintenir la connexion
+// Vérifier et maintenir la connexion MQTT
+if (!client.connected()) {
+  reconnect_mqtt();
+}
+client.loop();  // Nécessaire pour maintenir la connexion
   
-  unsigned long now = millis();
-  if (now - lastMeasure > MESURE_INTERVAL) {
-    lastMeasure = now;
+unsigned long now = millis();
+if (now - lastMeasure > MESURE_INTERVAL) {
+  lastMeasure = now;
 
-    // réglage led rétroéclairage
-    Retroeclairage();
+  // réglage led rétroéclairage
+  Retroeclairage();
 
-    // ----- Lecture AHT20 -----
-    sensors_event_t humid, tempAHT;
-    aht.getEvent(&humid, &tempAHT);   // remplit tempAHT.temperature et humid.relative_humidity[web:2]
+  // ----- Lecture AHT20 -----
+  sensors_event_t humid, tempAHT;
+  aht.getEvent(&humid, &tempAHT);   // remplit tempAHT.temperature et humid.relative_humidity[web:2]
 
-    // ----- Lecture BMP280 -----
-    float tempBMP  = bmp.readTemperature();   // °C[web:1]
-    float press_hPa = bmp.readPressure() / 100.0F;  // hPa[web:1]
+  // ----- Lecture BMP280 -----
+  float tempBMP  = bmp.readTemperature();   // °C[web:1]
+  float press_hPa = bmp.readPressure() / 100.0F;  // hPa[web:1]
 
-    
-/*
-    // Lecture des données du capteur
-    TempAndHumidity data = dhtSensor.getTempAndHumidity();
-*/
+  //---------Affichagesérie--------
+  Serial.println("===== Mesures =====");
+  Serial.print("AHT20  - T: ");
+  Serial.print(tempAHT.temperature,1);
+  Serial.print(" °C  |  RH: ");
+  Serial.print(humid.relative_humidity);
+  Serial.println(" %");
 
-    //---------Affichagesérie--------
-    Serial.println("===== Mesures =====");
-    Serial.print("AHT20  - T: ");
-    Serial.print(tempAHT.temperature,1);
-    Serial.print(" °C  |  RH: ");
-    Serial.print(humid.relative_humidity);
-    Serial.println(" %");
+  Serial.print("BMP280 - T: ");
+  Serial.print(tempBMP);
+  Serial.print(" °C  |  P: ");
+  Serial.print(press_hPa);
+  Serial.println(" hPa");
 
-    Serial.print("BMP280 - T: ");
-    Serial.print(tempBMP);
-    Serial.print(" °C  |  P: ");
-    Serial.print(press_hPa);
-    Serial.println(" hPa");
+  Serial.println();
 
-    Serial.println();
+  // Affichage sur le LCD
+  lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT.temperature,1);  lcd.print("C");
+  lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid.relative_humidity, 1);  lcd.print(" %");
+  // Affichage bright 
+  lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
+  lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print(press_hPa); lcd.print("hPa");
+}
 
-    // Affichage sur le LCD
-    lcd.setCursor(0, 0);  lcd.print("Tmp:");  lcd.print(tempAHT.temperature,1);  lcd.print("C");
-    lcd.setCursor(10, 0);  lcd.print("Hum:");  lcd.print(humid.relative_humidity, 1);  lcd.print(" %");
-    // Affichage bright 
-    lcd.setCursor(0, 1);  lcd.print("Brgt:");  lcd.print(bright);
-    ////////////////////Ajout pour test//////////////////////////////////////////////
-    lcd.setCursor(10, 1);lcd.print("Pres:"); lcd.print(press_hPa); lcd.print("hPa");
-/////////////////////////////////////////////////////////////////////
-   }
+// Lecture du MQ-7 avec calcul calibré
+int rawValue = analogRead(MQ7_PIN);
+float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
+float ratio = rs / Ro;            // Calcul du ratio RS/Ro
+float ppm = calculatePPM(ratio);  // Conversion en PPM réels
 
-    // Lecture du MQ-7 avec calcul calibré
-    int rawValue = analogRead(MQ7_PIN);
-    float rs = readRS(rawValue);  // Calcul de la résistance RS, On passe rawValue
-    float ratio = rs / Ro;            // Calcul du ratio RS/Ro
-    float ppm = calculatePPM(ratio);  // Conversion en PPM réels
+// ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
+unsigned long currentTime = millis();
 
-
-
-   // ========== GESTION DE L'ALTERNANCE D'AFFICHAGE =========
-    unsigned long currentTime = millis();
-
-    // Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
-    if (currentTime - lastDisplayChange >= DISPLAY_DURATION) {
-      lastDisplayChange = currentTime;
-      showBigPPM = !showBigPPM;  // Inverse le mode
-      currentInfo = 0;  // Réinitialise l'info à afficher
-      lastInfoChange = currentTime;
-    }
-
+// Vérifier si on doit changer de mode d'affichage (PPM ↔ Détails)
+if (currentTime - lastDisplayChange >= DISPLAY_DURATION) {
+  lastDisplayChange = currentTime;
+  showBigPPM = !showBigPPM;  // Inverse le mode
+  currentInfo = 0;  // Réinitialise l'info à afficher
+  lastInfoChange = currentTime;
+}
 
 // ========== AFFICHAGE SELON LE MODE ==========
 if (showBigPPM) {
@@ -468,24 +437,7 @@ if (showBigPPM) {
   }
 }
 
-  // Petit délai pour éviter de surcharger le LCD
-  delay(100);
+// Petit délai pour éviter de surcharger le LCD
+delay(100);
 
-
-
-
-    /*Serial.print("MQ7 brut = ");
-    Serial.print(rawValue);
-    Serial.print("  ~");
-    Serial.print(pseudoPPM);
-    Serial.println(" ppm (approx)");*/
-
-
-/*********************pUBLI mqtt**************************
-    // Publication MQTT (envoi de la valeur brute)
-    char payload[32];
-    snprintf(payload, sizeof(payload), "%d", rawValue);
-    client.publish(mqtt_topic, payload);
-*/
-  
 }
