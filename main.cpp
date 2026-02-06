@@ -227,84 +227,123 @@ void setup_wifi() {
 void publishMQTTDiscovery() {
   Serial.println("=== Publication MQTT Discovery ===");
   
+  // Vérifier que la connexion est active
+  if (!client.connected()) {
+    Serial.println("❌ Client MQTT non connecté !");
+    return;
+  }
+  
   // Configuration Température
-  const char* config_temp = 
-    "{"
-    "\"name\":\"Temperature\","
-    "\"device_class\":\"temperature\","
-    "\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\","
-    "\"unit_of_measurement\":\"°C\","
-    "\"value_template\":\"{{ value }}\","
-    "\"unique_id\":\"stationair_temp\","
-    "\"device\":{"
-      "\"identifiers\":[\"stationair\"],"
-      "\"name\":\"Station Air\","
-      "\"model\":\"ESP32 MQ7\","
-      "\"manufacturer\":\"DIY\""
-    "}"
-    "}";
-  client.publish(discovery_temp, config_temp, true);
-  Serial.println("✓ Température configurée");
+  String config_temp = "{";
+  config_temp += "\"name\":\"Temperature\",";
+  config_temp += "\"device_class\":\"temperature\",";
+  config_temp += "\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\",";
+  config_temp += "\"unit_of_measurement\":\"°C\",";
+  config_temp += "\"value_template\":\"{{ value }}\",";
+  config_temp += "\"unique_id\":\"stationair_temp\",";
+  config_temp += "\"device\":{";
+  config_temp += "\"identifiers\":[\"stationair\"],";
+  config_temp += "\"name\":\"Station Air\",";
+  config_temp += "\"model\":\"ESP32 MQ7\",";
+  config_temp += "\"manufacturer\":\"DIY\"";
+  config_temp += "}}";
+  
+  Serial.print("Taille JSON temp: ");
+  Serial.println(config_temp.length());
+  
+  bool success = client.publish(discovery_temp, config_temp.c_str(), true);
+  if (success) {
+    Serial.println("✓ Température configurée");
+  } else {
+    Serial.println("❌ ÉCHEC publication température !");
+  }
+  client.loop();  // Process la réponse
+  delay(200);
   
   // Configuration Humidité
-  const char* config_hum = 
-    "{"
-    "\"name\":\"Humidite\","
-    "\"device_class\":\"humidity\","
-    "\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\","
-    "\"unit_of_measurement\":\"%\","
-    "\"value_template\":\"{{ value }}\","
-    "\"unique_id\":\"stationair_hum\","
-    "\"device\":{"
-      "\"identifiers\":[\"stationair\"],"
-      "\"name\":\"Station Air\","
-      "\"model\":\"ESP32 MQ7\","
-      "\"manufacturer\":\"DIY\""
-    "}"
-    "}";
-  client.publish(discovery_hum, config_hum, true);
-  Serial.println("✓ Humidité configurée");
+  String config_hum = "{";
+  config_hum += "\"name\":\"Humidite\",";
+  config_hum += "\"device_class\":\"humidity\",";
+  config_hum += "\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\",";
+  config_hum += "\"unit_of_measurement\":\"%\",";
+  config_hum += "\"value_template\":\"{{ value }}\",";
+  config_hum += "\"unique_id\":\"stationair_hum\",";
+  config_hum += "\"device\":{";
+  config_hum += "\"identifiers\":[\"stationair\"],";
+  config_hum += "\"name\":\"Station Air\",";
+  config_hum += "\"model\":\"ESP32 MQ7\",";
+  config_hum += "\"manufacturer\":\"DIY\"";
+  config_hum += "}}";
+  
+  Serial.print("Taille JSON hum: ");
+  Serial.println(config_hum.length());
+  
+  success = client.publish(discovery_hum, config_hum.c_str(), true);
+  if (success) {
+    Serial.println("✓ Humidité configurée");
+  } else {
+    Serial.println("❌ ÉCHEC publication humidité !");
+  }
+  client.loop();
+  delay(200);
   
   // Configuration CO
-  const char* config_co = 
-    "{"
-    "\"name\":\"CO\","
-    "\"state_topic\":\"homeassistant/sensor/stationair/co/state\","
-    "\"unit_of_measurement\":\"ppm\","
-    "\"icon\":\"mdi:molecule-co\","
-    "\"value_template\":\"{{ value }}\","
-    "\"unique_id\":\"stationair_co\","
-    "\"device\":{"
-      "\"identifiers\":[\"stationair\"],"
-      "\"name\":\"Station Air\","
-      "\"model\":\"ESP32 MQ7\","
-      "\"manufacturer\":\"DIY\""
-    "}"
-    "}";
-  client.publish(discovery_co, config_co, true);
-  Serial.println("✓ CO configuré");
+  String config_co = "{";
+  config_co += "\"name\":\"CO\",";
+  config_co += "\"state_topic\":\"homeassistant/sensor/stationair/co/state\",";
+  config_co += "\"unit_of_measurement\":\"ppm\",";
+  config_co += "\"icon\":\"mdi:molecule-co\",";
+  config_co += "\"value_template\":\"{{ value }}\",";
+  config_co += "\"unique_id\":\"stationair_co\",";
+  config_co += "\"device\":{";
+  config_co += "\"identifiers\":[\"stationair\"],";
+  config_co += "\"name\":\"Station Air\",";
+  config_co += "\"model\":\"ESP32 MQ7\",";
+  config_co += "\"manufacturer\":\"DIY\"";
+  config_co += "}}";
+  
+  Serial.print("Taille JSON CO: ");
+  Serial.println(config_co.length());
+  
+  success = client.publish(discovery_co, config_co.c_str(), true);
+  if (success) {
+    Serial.println("✓ CO configuré");
+  } else {
+    Serial.println("❌ ÉCHEC publication CO !");
+  }
+  client.loop();
+  delay(200);
   
   // Configuration Pression
-  const char* config_pressure = 
-    "{"
-    "\"name\":\"Pression\","
-    "\"device_class\":\"pressure\","
-    "\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\","
-    "\"unit_of_measurement\":\"hPa\","
-    "\"value_template\":\"{{ value }}\","
-    "\"unique_id\":\"stationair_pressure\","
-    "\"device\":{"
-      "\"identifiers\":[\"stationair\"],"
-      "\"name\":\"Station Air\","
-      "\"model\":\"ESP32 MQ7\","
-      "\"manufacturer\":\"DIY\""
-    "}"
-    "}";
-  client.publish(discovery_pressure, config_pressure, true);
-  Serial.println("✓ Pression configurée");
+  String config_pressure = "{";
+  config_pressure += "\"name\":\"Pression\",";
+  config_pressure += "\"device_class\":\"pressure\",";
+  config_pressure += "\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\",";
+  config_pressure += "\"unit_of_measurement\":\"hPa\",";
+  config_pressure += "\"value_template\":\"{{ value }}\",";
+  config_pressure += "\"unique_id\":\"stationair_pressure\",";
+  config_pressure += "\"device\":{";
+  config_pressure += "\"identifiers\":[\"stationair\"],";
+  config_pressure += "\"name\":\"Station Air\",";
+  config_pressure += "\"model\":\"ESP32 MQ7\",";
+  config_pressure += "\"manufacturer\":\"DIY\"";
+  config_pressure += "}}";
+  
+  Serial.print("Taille JSON pressure: ");
+  Serial.println(config_pressure.length());
+  
+  success = client.publish(discovery_pressure, config_pressure.c_str(), true);
+  if (success) {
+    Serial.println("✓ Pression configurée");
+  } else {
+    Serial.println("❌ ÉCHEC publication pression !");
+  }
+  client.loop();
+  delay(200);
   
   Serial.println("=== Discovery terminé ===");
 }
+
 
 void reconnect_mqtt() {
   while (!client.connected()) {
@@ -555,77 +594,3 @@ void loop() {
   delay(100);
   
 } // FIN du loop
-
-/*
-Message 15 reçu sur homeassistant/sensor/stationair/pressure/state à 16:33 :
-974
-QoS: 0 - Retain: false
-Message 14 reçu sur homeassistant/sensor/stationair/co/state à 16:33 :
-0
-QoS: 0 - Retain: false
-Message 13 reçu sur homeassistant/sensor/stationair/humidity/state à 16:33 :
-47.8
-QoS: 0 - Retain: false
-Message 12 reçu sur homeassistant/sensor/stationair/temperature/state à 16:33 :
-20.8
-QoS: 0 - Retain: false
-Message 11 reçu sur homeassistant/Rennes_Ballon_Evier_state à 16:33 :
-{
-    "PuissanceS_M": 449,
-    "PuissanceI_M": 0,
-    "Tension_M": 0,
-    "Intensite_M": 0,
-    "PowerFactor_M": 0,
-    "Energie_M_Soutiree": 89804,
-    "Energie_M_Injectee": 19,
-    "EnergieJour_M_Soutiree": 6945,
-    "EnergieJour_M_Injectee": 0,
-    "Ouverture_Relais_1": 0,
-    "Actif_Relais_1": 0,
-    "Duree_Relais_1": 1.209852,
-    "Force_OnOff_Relais_1": 0
-}
-QoS: 0 - Retain: false
-Message 10 reçu sur homeassistant/sensor/stationair/pressure/state à 16:33 :
-974
-QoS: 0 - Retain: false
-Message 9 reçu sur homeassistant/sensor/stationair/co/state à 16:33 :
-0
-QoS: 0 - Retain: false
-Message 8 reçu sur homeassistant/sensor/stationair/humidity/state à 16:33 :
-47.8
-QoS: 0 - Retain: false
-Message 7 reçu sur homeassistant/sensor/stationair/temperature/state à 16:33 :
-20.8
-QoS: 0 - Retain: false
-Message 6 reçu sur homeassistant/Routeur_Solaire_state à 16:33 :
-{
-    "PuissanceS_M": 453,
-    "PuissanceI_M": 0,
-    "Tension_M": 241,
-    "Intensite_M": 2,
-    "PowerFactor_M": 0.93,
-    "Energie_M_Soutiree": 89804,
-    "Energie_M_Injectee": 19,
-    "EnergieJour_M_Soutiree": 6945,
-    "EnergieJour_M_Injectee": 0
-}
-QoS: 0 - Retain: false
-Message 5 reçu sur homeassistant/sensor/stationair/pressure/state à 16:33 :
-974
-QoS: 0 - Retain: false
-Message 4 reçu sur homeassistant/sensor/stationair/co/state à 16:33 :
-0
-QoS: 0 - Retain: false
-Message 3 reçu sur homeassistant/sensor/stationair/humidity/state à 16:33 :
-47.8
-QoS: 0 - Retain: false
-Message 2 reçu sur homeassistant/sensor/stationair/temperature/state à 16:33 :
-20.8
-QoS: 0 - Retain: false
-Message 1 reçu sur homeassistant/Rennes_Ballon_Evier/Available à 16:33 :
-online
-QoS: 0 - Retain: true
-Message 0 reçu sur homeassistant/Routeur_Solaire/Available à 16:33 :
-online
-QoS: 0 - Retain: true*/
