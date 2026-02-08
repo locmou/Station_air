@@ -67,6 +67,8 @@ const int   mqtt_port   = 1883;
 const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
 bool discoveryPublished = false;
+int discoveryStep = 0;
+unsigned long lastDiscoveryTime = 0;
 
 // Device ID unique
 const char* device_id = "stationair";
@@ -224,124 +226,121 @@ void setup_wifi() {
   }
 }
 
-void publishMQTTDiscovery() {
-  Serial.println("=== Publication MQTT Discovery ===");
+void publishDiscoveryStep() {
+  if (!client.connected()) return;
   
-  // Vérifier que la connexion est active
+  char payload[300];
+  bool success = false;
+  
+  switch(discoveryStep) {
+    case 1:
+      Serial.println("Discovery: Temp");
+      snprintf(payload, sizeof(payload),
+        "{\"name\":\"Temperature\",\"dev_cla\":\"temperature\",\"stat_t\":\"homeassistant/sensor/stationair/temperature/state\",\"unit_of_meas\":\"C\",\"uniq_id\":\"stationair_temp\",\"dev\":{\"ids\":[\"stationair\"],\"name\":\"StationAir\"}}");
+      success = client.publish("homeassistant/sensor/stationair/temperature/config", payload, true);
+      Serial.println(success ? "OK" : "FAIL");
+      break;
+      
+    case 2:
+      Serial.println("Discovery: Hum");
+      snprintf(payload, sizeof(payload),
+        "{\"name\":\"Humidite\",\"dev_cla\":\"humidity\",\"stat_t\":\"homeassistant/sensor/stationair/humidity/state\",\"unit_of_meas\":\"%%\",\"uniq_id\":\"stationair_hum\",\"dev\":{\"ids\":[\"stationair\"],\"name\":\"StationAir\"}}");
+      success = client.publish("homeassistant/sensor/stationair/humidity/config", payload, true);
+      Serial.println(success ? "OK" : "FAIL");
+      break;
+      
+    case 3:
+      Serial.println("Discovery: CO");
+      snprintf(payload, sizeof(payload),
+        "{\"name\":\"CO\",\"stat_t\":\"homeassistant/sensor/stationair/co/state\",\"unit_of_meas\":\"ppm\",\"icon\":\"mdi:molecule-co\",\"uniq_id\":\"stationair_co\",\"dev\":{\"ids\":[\"stationair\"],\"name\":\"StationAir\"}}");
+      success = client.publish("homeassistant/sensor/stationair/co/config", payload, true);
+      Serial.println(success ? "OK" : "FAIL");
+      break;
+      
+    case 4:
+      Serial.println("Discovery: Pression");
+      snprintf(payload, sizeof(payload),
+        "{\"name\":\"Pression\",\"dev_cla\":\"pressure\",\"stat_t\":\"homeassistant/sensor/stationair/pressure/state\",\"unit_of_meas\":\"hPa\",\"uniq_id\":\"stationair_pressure\",\"dev\":{\"ids\":[\"stationair\"],\"name\":\"StationAir\"}}");
+      success = client.publish("homeassistant/sensor/stationair/pressure/config", payload, true);
+      Serial.println(success ? "OK" : "FAIL");
+      break;
+  }
+  
+  discoveryStep++;
+  if (discoveryStep > 4) {
+    Serial.println("=== Discovery termine ===");
+    discoveryStep = 5;
+  }
+}
+
+void publishMQTTDiscovery() {
+  Serial.println("=== MQTT Discovery ===");
+  
   if (!client.connected()) {
-    Serial.println("❌ Client MQTT non connecté !");
+    Serial.println("Pas connecte!");
     return;
   }
   
-  // Configuration Température
-  String config_temp = "{";
-  config_temp += "\"name\":\"Temperature\",";
-  config_temp += "\"device_class\":\"temperature\",";
-  config_temp += "\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\",";
-  config_temp += "\"unit_of_measurement\":\"°C\",";
-  config_temp += "\"value_template\":\"{{ value }}\",";
-  config_temp += "\"unique_id\":\"stationair_temp\",";
-  config_temp += "\"device\":{";
-  config_temp += "\"identifiers\":[\"stationair\"],";
-  config_temp += "\"name\":\"Station Air\",";
-  config_temp += "\"model\":\"ESP32 MQ7\",";
-  config_temp += "\"manufacturer\":\"DIY\"";
-  config_temp += "}}";
+  // Buffer réutilisable pour tous les JSON
+  char payload[350];
   
-  Serial.print("Taille JSON temp: ");
-  Serial.println(config_temp.length());
+  // Température
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"Temperature\","
+    "\"dev_cla\":\"temperature\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/temperature/state\","
+    "\"unit_of_meas\":\"°C\","
+    "\"uniq_id\":\"stationair_temp\","
+    "\"dev\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}");
   
-  bool success = client.publish(discovery_temp, config_temp.c_str(), true);
-  if (success) {
-    Serial.println("✓ Température configurée");
-  } else {
-    Serial.println("❌ ÉCHEC publication température !");
+  if (client.publish("homeassistant/sensor/stationair/temperature/config", payload, true)) {
+    Serial.println("OK Temp");
   }
-  client.loop();  // Process la réponse
-  delay(200);
+  yield();
   
-  // Configuration Humidité
-  String config_hum = "{";
-  config_hum += "\"name\":\"Humidite\",";
-  config_hum += "\"device_class\":\"humidity\",";
-  config_hum += "\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\",";
-  config_hum += "\"unit_of_measurement\":\"%\",";
-  config_hum += "\"value_template\":\"{{ value }}\",";
-  config_hum += "\"unique_id\":\"stationair_hum\",";
-  config_hum += "\"device\":{";
-  config_hum += "\"identifiers\":[\"stationair\"],";
-  config_hum += "\"name\":\"Station Air\",";
-  config_hum += "\"model\":\"ESP32 MQ7\",";
-  config_hum += "\"manufacturer\":\"DIY\"";
-  config_hum += "}}";
+  // Humidité
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"Humidite\","
+    "\"dev_cla\":\"humidity\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/humidity/state\","
+    "\"unit_of_meas\":\"%%\","
+    "\"uniq_id\":\"stationair_hum\","
+    "\"dev\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}");
   
-  Serial.print("Taille JSON hum: ");
-  Serial.println(config_hum.length());
-  
-  success = client.publish(discovery_hum, config_hum.c_str(), true);
-  if (success) {
-    Serial.println("✓ Humidité configurée");
-  } else {
-    Serial.println("❌ ÉCHEC publication humidité !");
+  if (client.publish("homeassistant/sensor/stationair/humidity/config", payload, true)) {
+    Serial.println("OK Hum");
   }
-  client.loop();
-  delay(200);
+  yield();
   
-  // Configuration CO
-  String config_co = "{";
-  config_co += "\"name\":\"CO\",";
-  config_co += "\"state_topic\":\"homeassistant/sensor/stationair/co/state\",";
-  config_co += "\"unit_of_measurement\":\"ppm\",";
-  config_co += "\"icon\":\"mdi:molecule-co\",";
-  config_co += "\"value_template\":\"{{ value }}\",";
-  config_co += "\"unique_id\":\"stationair_co\",";
-  config_co += "\"device\":{";
-  config_co += "\"identifiers\":[\"stationair\"],";
-  config_co += "\"name\":\"Station Air\",";
-  config_co += "\"model\":\"ESP32 MQ7\",";
-  config_co += "\"manufacturer\":\"DIY\"";
-  config_co += "}}";
+  // CO
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"CO\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/co/state\","
+    "\"unit_of_meas\":\"ppm\","
+    "\"icon\":\"mdi:molecule-co\","
+    "\"uniq_id\":\"stationair_co\","
+    "\"dev\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}");
   
-  Serial.print("Taille JSON CO: ");
-  Serial.println(config_co.length());
-  
-  success = client.publish(discovery_co, config_co.c_str(), true);
-  if (success) {
-    Serial.println("✓ CO configuré");
-  } else {
-    Serial.println("❌ ÉCHEC publication CO !");
+  if (client.publish("homeassistant/sensor/stationair/co/config", payload, true)) {
+    Serial.println("OK CO");
   }
-  client.loop();
-  delay(200);
+  yield();
   
-  // Configuration Pression
-  String config_pressure = "{";
-  config_pressure += "\"name\":\"Pression\",";
-  config_pressure += "\"device_class\":\"pressure\",";
-  config_pressure += "\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\",";
-  config_pressure += "\"unit_of_measurement\":\"hPa\",";
-  config_pressure += "\"value_template\":\"{{ value }}\",";
-  config_pressure += "\"unique_id\":\"stationair_pressure\",";
-  config_pressure += "\"device\":{";
-  config_pressure += "\"identifiers\":[\"stationair\"],";
-  config_pressure += "\"name\":\"Station Air\",";
-  config_pressure += "\"model\":\"ESP32 MQ7\",";
-  config_pressure += "\"manufacturer\":\"DIY\"";
-  config_pressure += "}}";
+  // Pression
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"Pression\","
+    "\"dev_cla\":\"pressure\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/pressure/state\","
+    "\"unit_of_meas\":\"hPa\","
+    "\"uniq_id\":\"stationair_pressure\","
+    "\"dev\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}");
   
-  Serial.print("Taille JSON pressure: ");
-  Serial.println(config_pressure.length());
-  
-  success = client.publish(discovery_pressure, config_pressure.c_str(), true);
-  if (success) {
-    Serial.println("✓ Pression configurée");
-  } else {
-    Serial.println("❌ ÉCHEC publication pression !");
+  if (client.publish("homeassistant/sensor/stationair/pressure/config", payload, true)) {
+    Serial.println("OK Pression");
   }
-  client.loop();
-  delay(200);
+  yield();
   
-  Serial.println("=== Discovery terminé ===");
+  Serial.println("=== Discovery termine ===");
 }
 
 
@@ -410,10 +409,19 @@ void setup() {
   setup_wifi();
 
 
-  // Configuration MQTT
+   // Configuration MQTT
   client.setServer(mqtt_server, mqtt_port);
-  client.setKeepAlive(60);        // ← AJOUTEZ CETTE LIGNE
-  client.setSocketTimeout(30);    // ← Et celle-ci pour le timeout de socket
+  client.setKeepAlive(60);
+  client.setSocketTimeout(30);
+  
+  // VÉRIFIER LA TAILLE DU BUFFER
+  Serial.print("Taille buffer MQTT: ");
+  Serial.println(MQTT_MAX_PACKET_SIZE);
+  
+  // Si la taille n'est pas 512, forcer manuellement
+  client.setBufferSize(512);
+  Serial.println("Buffer MQTT forcé à 512");
+  
   Serial.println("Configuration MQTT terminée");
 
   // Déclaration des broches
@@ -477,28 +485,35 @@ void setup() {
 /*********************************************LOOP ************************************************ */
 
 void loop() {
-  
+
+
   // ========== MAINTIEN CONNEXION MQTT (TOUJOURS EN PREMIER) ==========
   if (!client.connected()) {
     reconnect_mqtt();
   }
   client.loop();  // ✅ Appel régulier pour garder la connexion
 
-  // TEST : Republier Discovery après 30 secondes (pour debug)
-  static bool testDiscovery = false;
-  if (!testDiscovery && millis() > 30000) {  // Après 30 secondes
-    Serial.println("=== TEST : Republication Discovery ===");
-    publishMQTTDiscovery();
-    testDiscovery = true;
-  }
-    
   unsigned long now = millis();
-  
-  // ========== MESURES PÉRIODIQUES (toutes les 10 secondes) ==========
-  if (now - lastMeasure > MESURE_INTERVAL) {
-    lastMeasure = now;
 
-    // Réglage LED rétroéclairage
+if (discoveryStep == 0 && now > 3000 && client.connected()) {
+    Serial.println("=== Debut Discovery ===");
+    discoveryStep = 1;
+    lastDiscoveryTime = now;
+  }
+  
+  if (discoveryStep >= 1 && discoveryStep <= 4) {
+    if (now - lastDiscoveryTime >= 500) {
+      publishDiscoveryStep();
+      lastDiscoveryTime = now;
+    }
+  }
+  
+  if (discoveryStep == 5 && now - lastMeasure > MESURE_INTERVAL) {
+    
+    lastMeasure = now;
+  
+
+      // Réglage LED rétroéclairage
     Retroeclairage();
 
     // Lecture AHT20
