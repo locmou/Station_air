@@ -233,36 +233,91 @@ void publishMQTTDiscovery() {
     return;
   }
   
-  Serial.println("=== Discovery Start ===");
+  Serial.println("=== MQTT Discovery ===");
   
-  // TEMPÉRATURE - Version ultra-simple
-  const char* t = "{\"name\":\"Temp\",\"stat_t\":\"homeassistant/sensor/stationair/temperature/state\",\"uniq_id\":\"sta_t\"}";
-  bool ok = client.publish("homeassistant/sensor/stationair/temperature/config", t, true);
-  Serial.println(ok ? "T:OK" : "T:FAIL");
+  char payload[400];
+  
+  // TEMPÉRATURE
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"Temperature\","
+    "\"dev_cla\":\"temperature\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/temperature/state\","
+    "\"unit_of_meas\":\"°C\","
+    "\"uniq_id\":\"stationair_temp\","
+    "\"dev\":{"
+      "\"ids\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"mdl\":\"ESP32 Capteurs\","
+      "\"mf\":\"DIY\""
+    "}}");
+  
+  if (client.publish("homeassistant/sensor/stationair/temperature/config", payload, true)) {
+    Serial.println("OK Temp");
+  }
   yield();
-  delay(100);
+  delay(200);
   
   // HUMIDITÉ
-  const char* h = "{\"name\":\"Hum\",\"stat_t\":\"homeassistant/sensor/stationair/humidity/state\",\"uniq_id\":\"sta_h\"}";
-  ok = client.publish("homeassistant/sensor/stationair/humidity/config", h, true);
-  Serial.println(ok ? "H:OK" : "H:FAIL");
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"Humidite\","
+    "\"dev_cla\":\"humidity\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/humidity/state\","
+    "\"unit_of_meas\":\"%%\","
+    "\"uniq_id\":\"stationair_hum\","
+    "\"dev\":{"
+      "\"ids\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"mdl\":\"ESP32 Capteurs\","
+      "\"mf\":\"DIY\""
+    "}}");
+  
+  if (client.publish("homeassistant/sensor/stationair/humidity/config", payload, true)) {
+    Serial.println("OK Hum");
+  }
   yield();
-  delay(100);
+  delay(200);
   
   // CO
-  const char* c = "{\"name\":\"CO\",\"stat_t\":\"homeassistant/sensor/stationair/co/state\",\"uniq_id\":\"sta_c\"}";
-  ok = client.publish("homeassistant/sensor/stationair/co/config", c, true);
-  Serial.println(ok ? "C:OK" : "C:FAIL");
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"CO\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/co/state\","
+    "\"unit_of_meas\":\"ppm\","
+    "\"icon\":\"mdi:molecule-co\","
+    "\"uniq_id\":\"stationair_co\","
+    "\"dev\":{"
+      "\"ids\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"mdl\":\"ESP32 Capteurs\","
+      "\"mf\":\"DIY\""
+    "}}");
+  
+  if (client.publish("homeassistant/sensor/stationair/co/config", payload, true)) {
+    Serial.println("OK CO");
+  }
   yield();
-  delay(100);
+  delay(200);
   
   // PRESSION
-  const char* p = "{\"name\":\"Pres\",\"stat_t\":\"homeassistant/sensor/stationair/pressure/state\",\"uniq_id\":\"sta_p\"}";
-  ok = client.publish("homeassistant/sensor/stationair/pressure/config", p, true);
-  Serial.println(ok ? "P:OK" : "P:FAIL");
-  yield();
+  snprintf(payload, sizeof(payload),
+    "{\"name\":\"Pression\","
+    "\"dev_cla\":\"pressure\","
+    "\"stat_t\":\"homeassistant/sensor/stationair/pressure/state\","
+    "\"unit_of_meas\":\"hPa\","
+    "\"uniq_id\":\"stationair_pressure\","
+    "\"dev\":{"
+      "\"ids\":[\"stationair\"],"
+      "\"name\":\"Station Air\","
+      "\"mdl\":\"ESP32 Capteurs\","
+      "\"mf\":\"DIY\""
+    "}}");
   
-  Serial.println("=== Discovery End ===");
+  if (client.publish("homeassistant/sensor/stationair/pressure/config", payload, true)) {
+    Serial.println("OK Pression");
+  }
+  yield();
+  delay(200);
+  
+  Serial.println("=== Discovery termine ===");
 }
 
 
@@ -516,31 +571,3 @@ void loop() {
   delay(100);
   
 } // FIN du loop
-/*=== Connexion WiFi ===
-Connexion en cours
-WiFi connecté !
-Adresse IP : 192.168.1.20
-SSID : Mounwiff
-Taille buffer MQTT: 512
-Buffer MQTT forcé à 512
-Configuration MQTT terminée
-Init AHT20 + BMP280
-AHT20 OK
-BMP280 0x76 non detecte, essai 0x77...
-BMP280 OK
-Connexion au broker MQTT... Connecté !
-=== Discovery Start ===
-T:OK
-H:OK
-C:OK
-P:OK
-=== Discovery End ===
-
-et 
-coté log mqtt:
-
-2026-02-08 19:22:42: New client connected from 192.168.1.20:55822 as ESP32_StationAir_11b (p2, c1, k60, u'loic.mounier@laposte.net').
-2026-02-08 19:23:32: New connection from 172.30.32.2:35870 on port 1883.
-2026-02-08 19:23:32: Client <unknown> closed its connection.
-2026-02-08 19:23:59: Client ESP32_StationAir_507f has exceeded timeout, disconnecting.
-*/
