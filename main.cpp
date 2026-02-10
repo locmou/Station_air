@@ -228,19 +228,78 @@ void setup_wifi() {
 
 
 void publishMQTTDiscovery() {
-  Serial.println("D1");
-  client.publish("homeassistant/sensor/stationair/temperature/config", "{\"name\":\"Temp\",\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\"}", true);
+  if (!client.connected()) {
+    Serial.println("Pas connecte");
+    return;
+  }
+  
+  Serial.println("Discovery debut");
+  
+  // TEMPÉRATURE
+  String config_temp = "{";
+  config_temp += "\"name\":\"Temperature\",";
+  config_temp += "\"device_class\":\"temperature\",";
+  config_temp += "\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\",";
+  config_temp += "\"unit_of_measurement\":\"°C\",";
+  config_temp += "\"unique_id\":\"stationair_temp\",";
+  config_temp += "\"device\":{";
+  config_temp += "\"identifiers\":[\"stationair\"],";
+  config_temp += "\"name\":\"Station Air\"";
+  config_temp += "}}";
+  
+  client.publish("homeassistant/sensor/stationair/temperature/config", config_temp.c_str(), true);
+  Serial.println("T");
   delay(200);
-  Serial.println("D2");
-  client.publish("homeassistant/sensor/stationair/humidity/config", "{\"name\":\"Hum\",\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\"}", true);
+  
+  // HUMIDITÉ
+  String config_hum = "{";
+  config_hum += "\"name\":\"Humidite\",";
+  config_hum += "\"device_class\":\"humidity\",";
+  config_hum += "\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\",";
+  config_hum += "\"unit_of_measurement\":\"%\",";
+  config_hum += "\"unique_id\":\"stationair_hum\",";
+  config_hum += "\"device\":{";
+  config_hum += "\"identifiers\":[\"stationair\"],";
+  config_hum += "\"name\":\"Station Air\"";
+  config_hum += "}}";
+  
+  client.publish("homeassistant/sensor/stationair/humidity/config", config_hum.c_str(), true);
+  Serial.println("H");
   delay(200);
-  Serial.println("D3");
-  client.publish("homeassistant/sensor/stationair/co/config", "{\"name\":\"CO\",\"state_topic\":\"homeassistant/sensor/stationair/co/state\"}", true);
+  
+  // CO
+  String config_co = "{";
+  config_co += "\"name\":\"CO\",";
+  config_co += "\"state_topic\":\"homeassistant/sensor/stationair/co/state\",";
+  config_co += "\"unit_of_measurement\":\"ppm\",";
+  config_co += "\"icon\":\"mdi:molecule-co\",";
+  config_co += "\"unique_id\":\"stationair_co\",";
+  config_co += "\"device\":{";
+  config_co += "\"identifiers\":[\"stationair\"],";
+  config_co += "\"name\":\"Station Air\"";
+  config_co += "}}";
+  
+  client.publish("homeassistant/sensor/stationair/co/config", config_co.c_str(), true);
+  Serial.println("C");
   delay(200);
-  Serial.println("D4");
-  client.publish("homeassistant/sensor/stationair/pressure/config", "{\"name\":\"Pres\",\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\"}", true);
+  
+  // PRESSION
+  String config_press = "{";
+  config_press += "\"name\":\"Pression\",";
+  config_press += "\"device_class\":\"pressure\",";
+  config_press += "\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\",";
+  config_press += "\"unit_of_measurement\":\"hPa\",";
+  config_press += "\"unique_id\":\"stationair_pressure\",";
+  config_press += "\"device\":{";
+  config_press += "\"identifiers\":[\"stationair\"],";
+  config_press += "\"name\":\"Station Air\"";
+  config_press += "}}";
+  
+  client.publish("homeassistant/sensor/stationair/pressure/config", config_press.c_str(), true);
+  Serial.println("P");
   delay(200);
-  Serial.println("Discovery fin");
+  
+  Serial.println("Discovery OK");
 }
 
 
@@ -383,12 +442,6 @@ client.setBufferSize(512);
 /*********************************************LOOP ************************************************ */
 
 void loop() {
-
-   static unsigned long lastPrint = 0;
-  if (millis() - lastPrint > 1000) {
-    lastPrint = millis();
-    Serial.print(".");  // Affiche un point chaque seconde
-  }
 
   // ========== MAINTIEN CONNEXION MQTT (TOUJOURS EN PREMIER) ==========
   if (!client.connected()) {
