@@ -9,7 +9,7 @@
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <PubSubClient.h>
-#define MQTT_MAX_PACKET_SIZE 512
+#define MQTT_MAX_PACKET_SIZE 1024
 #include "DHTesp.h" 
 
 // Objets capteurs
@@ -232,47 +232,42 @@ void setup_wifi() {
 
 
 void publishMQTTDiscovery() {
-  if (!client.connected()) {
-    Serial.println("Pas connecte");
-    return;
-  }
-  
+
+  if (!client.connected()) return;
+
   Serial.println("D-Start");
-  
-  // TEMPÉRATURE - Version avec const char* directe
-  const char* t = "{\"name\":\"Temperature\",\"uniq_id\":\"sta_t\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"device_class\":\"temperature\",\"unit_of_meas\":\"C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
-  
-  Serial.println("D-T1");
-  bool ok = client.publish("homeassistant/sensor/stationair_temperature/config", t, true);
-  Serial.println(ok ? "D-T2-OK" : "D-T2-FAIL");
-  delay(200);
-  
-  // HUMIDITÉ
-  const char* h = "{\"name\":\"Humidite\",\"uniq_id\":\"sta_h\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"device_class\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
-  
-  Serial.println("D-H1");
-  ok = client.publish("homeassistant/sensor/stationair_humidity/config", h, true);
-  Serial.println(ok ? "D-H2-OK" : "D-H2-FAIL");
-  delay(200);
-  
-  // CO
-  const char* c = "{\"name\":\"CO\",\"uniq_id\":\"sta_c\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
-  
-  Serial.println("D-C1");
-  ok = client.publish("homeassistant/sensor/stationair_co/config", c, true);
-  Serial.println(ok ? "D-C2-OK" : "D-C2-FAIL");
-  delay(200);
-  
-  // PRESSION
-  const char* p = "{\"name\":\"Pression\",\"uniq_id\":\"sta_p\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"device_class\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
-  
-  Serial.println("D-P1");
-  ok = client.publish("homeassistant/sensor/stationair_pressure/config", p, true);
-  Serial.println(ok ? "D-P2-OK" : "D-P2-FAIL");
-  delay(200);
-  
+
+  client.publish("stationair/status","online",true);
+
+  client.publish(
+    "homeassistant/sensor/stationair/temperature/config",
+    "{\"name\":\"Temperature\",\"uniq_id\":\"sta_t\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"°C\",\"val_tpl\":\"{{ value_json.temperature }}\"}",
+    true);
+client.loop();
+  delay(100);
+
+  client.publish(
+    "homeassistant/sensor/stationair/humidity/config",
+    "{\"name\":\"Humidite\",\"uniq_id\":\"sta_h\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\"}",
+    true);
+client.loop();
+  delay(100);
+
+  client.publish(
+    "homeassistant/sensor/stationair/co/config",
+    "{\"name\":\"CO\",\"uniq_id\":\"sta_c\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\"}",
+    true);
+client.loop();
+  delay(100);
+
+  client.publish(
+    "homeassistant/sensor/stationair/pressure/config",
+    "{\"name\":\"Pression\",\"uniq_id\":\"sta_p\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\"}",
+    true);
+client.loop();
   Serial.println("D-End");
 }
+
 
 
 void reconnect_mqtt() {
@@ -282,8 +277,16 @@ void reconnect_mqtt() {
     String clientId = "ESP32_StationAir_";
     clientId += String(random(0xffff), HEX);
     
-    if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
+    if (client.connect(clientId.c_str(),
+                   mqtt_user,
+                   mqtt_pass,
+                   "stationair/status",
+                   0,
+                   true,
+                   "offline")) {
       Serial.println(" Connecté !");
+      client.publish("stationair/status", "online", true);
+      client.loop();
       discoveryTimer = millis();  // Démarrer timer
       discoveryDone = false;      // Réinitialiser
       
@@ -352,15 +355,14 @@ void setup() {
   client.setKeepAlive(60);
   client.setSocketTimeout(5);
 
-client.setBufferSize(512);
   
   // VÉRIFIER LA TAILLE DU BUFFER
   Serial.print("Taille buffer MQTT: ");
   Serial.println(MQTT_MAX_PACKET_SIZE);
   
   // Si la taille n'est pas 512, forcer manuellement
-  client.setBufferSize(512);
-  Serial.println("Buffer MQTT forcé à 512");
+  client.setBufferSize(1024);
+  Serial.println("Buffer MQTT forcé à 1024");
   
   Serial.println("Configuration MQTT terminée");
 
@@ -538,6 +540,6 @@ void loop() {
   }
 
   // Petit délai
-  delay(100);
+  delay(10);
   
 } // FIN du loop
