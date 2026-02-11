@@ -68,6 +68,9 @@ const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
 bool discoveryPublished = false;
 bool discoveryDone = false;
+char DEVICE[300];
+char ESP_ID[15];
+char StateTopic[50];
 
 
 // Device ID unique
@@ -235,67 +238,75 @@ void publishMQTTDiscovery() {
   
   Serial.println("Discovery debut");
   
-  // TEMPÉRATURE
-  String config_temp = "{";
-  config_temp += "\"name\":\"Temperature\",";
-  config_temp += "\"device_class\":\"temperature\",";
-  config_temp += "\"state_topic\":\"homeassistant/sensor/stationair/temperature/state\",";
-  config_temp += "\"unit_of_measurement\":\"°C\",";
-  config_temp += "\"unique_id\":\"stationair_temp\",";
-  config_temp += "\"device\":{";
-  config_temp += "\"identifiers\":[\"stationair\"],";
-  config_temp += "\"name\":\"Station Air\"";
-  config_temp += "}}";
+  char value[700];
+  char DiscoveryTopic[120];
+  char UniqueID[50];
   
-  client.publish("homeassistant/sensor/stationair/temperature/config", config_temp.c_str(), true);
+  // TEMPÉRATURE
+  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_temperature/config");
+  sprintf(UniqueID, "stationair_temperature");
+  sprintf(value, 
+    "{\"name\":\"Temperature\","
+    "\"uniq_id\":\"%s\","
+    "\"stat_t\":\"%s\","
+    "\"device_class\":\"temperature\","
+    "\"unit_of_meas\":\"°C\","
+    "\"val_tpl\":\"{{ value_json.temperature }}\","
+    "\"device\":%s}", 
+    UniqueID, StateTopic, DEVICE
+  );
+  client.publish(DiscoveryTopic, value, true);
   Serial.println("T");
   delay(200);
   
   // HUMIDITÉ
-  String config_hum = "{";
-  config_hum += "\"name\":\"Humidite\",";
-  config_hum += "\"device_class\":\"humidity\",";
-  config_hum += "\"state_topic\":\"homeassistant/sensor/stationair/humidity/state\",";
-  config_hum += "\"unit_of_measurement\":\"%\",";
-  config_hum += "\"unique_id\":\"stationair_hum\",";
-  config_hum += "\"device\":{";
-  config_hum += "\"identifiers\":[\"stationair\"],";
-  config_hum += "\"name\":\"Station Air\"";
-  config_hum += "}}";
-  
-  client.publish("homeassistant/sensor/stationair/humidity/config", config_hum.c_str(), true);
+  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_humidity/config");
+  sprintf(UniqueID, "stationair_humidity");
+  sprintf(value, 
+    "{\"name\":\"Humidite\","
+    "\"uniq_id\":\"%s\","
+    "\"stat_t\":\"%s\","
+    "\"device_class\":\"humidity\","
+    "\"unit_of_meas\":\"%%\","
+    "\"val_tpl\":\"{{ value_json.humidity }}\","
+    "\"device\":%s}", 
+    UniqueID, StateTopic, DEVICE
+  );
+  client.publish(DiscoveryTopic, value, true);
   Serial.println("H");
   delay(200);
   
   // CO
-  String config_co = "{";
-  config_co += "\"name\":\"CO\",";
-  config_co += "\"state_topic\":\"homeassistant/sensor/stationair/co/state\",";
-  config_co += "\"unit_of_measurement\":\"ppm\",";
-  config_co += "\"icon\":\"mdi:molecule-co\",";
-  config_co += "\"unique_id\":\"stationair_co\",";
-  config_co += "\"device\":{";
-  config_co += "\"identifiers\":[\"stationair\"],";
-  config_co += "\"name\":\"Station Air\"";
-  config_co += "}}";
-  
-  client.publish("homeassistant/sensor/stationair/co/config", config_co.c_str(), true);
+  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_co/config");
+  sprintf(UniqueID, "stationair_co");
+  sprintf(value, 
+    "{\"name\":\"CO\","
+    "\"uniq_id\":\"%s\","
+    "\"stat_t\":\"%s\","
+    "\"unit_of_meas\":\"ppm\","
+    "\"icon\":\"mdi:molecule-co\","
+    "\"val_tpl\":\"{{ value_json.co }}\","
+    "\"device\":%s}", 
+    UniqueID, StateTopic, DEVICE
+  );
+  client.publish(DiscoveryTopic, value, true);
   Serial.println("C");
   delay(200);
   
   // PRESSION
-  String config_press = "{";
-  config_press += "\"name\":\"Pression\",";
-  config_press += "\"device_class\":\"pressure\",";
-  config_press += "\"state_topic\":\"homeassistant/sensor/stationair/pressure/state\",";
-  config_press += "\"unit_of_measurement\":\"hPa\",";
-  config_press += "\"unique_id\":\"stationair_pressure\",";
-  config_press += "\"device\":{";
-  config_press += "\"identifiers\":[\"stationair\"],";
-  config_press += "\"name\":\"Station Air\"";
-  config_press += "}}";
-  
-  client.publish("homeassistant/sensor/stationair/pressure/config", config_press.c_str(), true);
+  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_pressure/config");
+  sprintf(UniqueID, "stationair_pressure");
+  sprintf(value, 
+    "{\"name\":\"Pression\","
+    "\"uniq_id\":\"%s\","
+    "\"stat_t\":\"%s\","
+    "\"device_class\":\"pressure\","
+    "\"unit_of_meas\":\"hPa\","
+    "\"val_tpl\":\"{{ value_json.pressure }}\","
+    "\"device\":%s}", 
+    UniqueID, StateTopic, DEVICE
+  );
+  client.publish(DiscoveryTopic, value, true);
   Serial.println("P");
   delay(200);
   
@@ -330,26 +341,20 @@ void reconnect_mqtt() {
 
 
 void publishSensorData(float temperature, float humidity, float co_ppm, float pressure) {
-  char payload[10];
+  char value[300];
   
-  // Température
-  dtostrf(temperature, 4, 1, payload);
-  client.publish(state_temp, payload);
+  sprintf(value, 
+    "{\"temperature\":%.1f,"
+    "\"humidity\":%.1f,"
+    "\"co\":%.1f,"
+    "\"pressure\":%.1f}", 
+    temperature, humidity, co_ppm, pressure
+  );
   
-  // Humidité
-  dtostrf(humidity, 4, 1, payload);
-  client.publish(state_hum, payload);
-  
-  // CO
-  dtostrf(co_ppm, 5, 1, payload);
-  client.publish(state_co, payload);
-  
-  // Pression
-  dtostrf(pressure, 6, 1, payload);
-  client.publish(state_pressure, payload);
-  
-  Serial.println("✓ Données MQTT publiées");
+  client.publish(StateTopic, value);
+  Serial.println("Donnees publiees");
 }
+
 
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
@@ -363,6 +368,31 @@ void setup() {
   // Connexion WiFi
   setup_wifi();
 
+    // Créer l'ID unique de l'appareil
+  byte mac[6];
+  WiFi.macAddress(mac);
+  sprintf(ESP_ID, "%02x%02x%02x%02x%02x", mac[4], mac[3], mac[2], mac[1], mac[0]);
+  
+  // Créer le JSON DEVICE
+  String nomRouteur = "Station Air";
+  String mdl = "ESP32-" + String(ESP_ID);
+  String mf = "DIY";
+  String hw = String(ESP.getChipModel());
+  String sw = "v1.0";
+  String cu = "http://" + WiFi.localIP().toString();
+  
+  sprintf(DEVICE, 
+    "{\"ids\":\"%s\","
+    "\"name\":\"%s\","
+    "\"mdl\":\"%s\","
+    "\"mf\":\"%s\","
+    "\"hw\":\"%s\","
+    "\"sw\":\"%s\","
+    "\"cu\":\"%s\"}", 
+    ESP_ID, nomRouteur.c_str(), mdl.c_str(), mf.c_str(), hw.c_str(), sw.c_str(), cu.c_str()
+  );
+  
+  sprintf(StateTopic, "homeassistant/sensor/stationair/state");
 
    // Configuration MQTT
   client.setServer(mqtt_server, mqtt_port);
