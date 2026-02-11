@@ -67,10 +67,11 @@ const int   mqtt_port   = 1883;
 const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
 bool discoveryPublished = false;
-bool discoveryDone = false;
 char DEVICE[300];
 char ESP_ID[15];
 char StateTopic[50];
+bool discoveryDone = false;
+unsigned long discoveryTimer = 0;
 
 
 // Device ID unique
@@ -236,81 +237,41 @@ void publishMQTTDiscovery() {
     return;
   }
   
-  Serial.println("Discovery debut");
+  Serial.println("D-Start");
   
-  char value[700];
-  char DiscoveryTopic[120];
-  char UniqueID[50];
+  // TEMPÉRATURE - Version avec const char* directe
+  const char* t = "{\"name\":\"Temperature\",\"uniq_id\":\"sta_t\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"device_class\":\"temperature\",\"unit_of_meas\":\"C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
   
-  // TEMPÉRATURE
-  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_temperature/config");
-  sprintf(UniqueID, "stationair_temperature");
-  sprintf(value, 
-    "{\"name\":\"Temperature\","
-    "\"uniq_id\":\"%s\","
-    "\"stat_t\":\"%s\","
-    "\"device_class\":\"temperature\","
-    "\"unit_of_meas\":\"°C\","
-    "\"val_tpl\":\"{{ value_json.temperature }}\","
-    "\"device\":%s}", 
-    UniqueID, StateTopic, DEVICE
-  );
-  client.publish(DiscoveryTopic, value, true);
-  Serial.println("T");
+  Serial.println("D-T1");
+  bool ok = client.publish("homeassistant/sensor/stationair_temperature/config", t, true);
+  Serial.println(ok ? "D-T2-OK" : "D-T2-FAIL");
   delay(200);
   
   // HUMIDITÉ
-  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_humidity/config");
-  sprintf(UniqueID, "stationair_humidity");
-  sprintf(value, 
-    "{\"name\":\"Humidite\","
-    "\"uniq_id\":\"%s\","
-    "\"stat_t\":\"%s\","
-    "\"device_class\":\"humidity\","
-    "\"unit_of_meas\":\"%%\","
-    "\"val_tpl\":\"{{ value_json.humidity }}\","
-    "\"device\":%s}", 
-    UniqueID, StateTopic, DEVICE
-  );
-  client.publish(DiscoveryTopic, value, true);
-  Serial.println("H");
+  const char* h = "{\"name\":\"Humidite\",\"uniq_id\":\"sta_h\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"device_class\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
+  
+  Serial.println("D-H1");
+  ok = client.publish("homeassistant/sensor/stationair_humidity/config", h, true);
+  Serial.println(ok ? "D-H2-OK" : "D-H2-FAIL");
   delay(200);
   
   // CO
-  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_co/config");
-  sprintf(UniqueID, "stationair_co");
-  sprintf(value, 
-    "{\"name\":\"CO\","
-    "\"uniq_id\":\"%s\","
-    "\"stat_t\":\"%s\","
-    "\"unit_of_meas\":\"ppm\","
-    "\"icon\":\"mdi:molecule-co\","
-    "\"val_tpl\":\"{{ value_json.co }}\","
-    "\"device\":%s}", 
-    UniqueID, StateTopic, DEVICE
-  );
-  client.publish(DiscoveryTopic, value, true);
-  Serial.println("C");
+  const char* c = "{\"name\":\"CO\",\"uniq_id\":\"sta_c\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
+  
+  Serial.println("D-C1");
+  ok = client.publish("homeassistant/sensor/stationair_co/config", c, true);
+  Serial.println(ok ? "D-C2-OK" : "D-C2-FAIL");
   delay(200);
   
   // PRESSION
-  sprintf(DiscoveryTopic, "homeassistant/sensor/stationair_pressure/config");
-  sprintf(UniqueID, "stationair_pressure");
-  sprintf(value, 
-    "{\"name\":\"Pression\","
-    "\"uniq_id\":\"%s\","
-    "\"stat_t\":\"%s\","
-    "\"device_class\":\"pressure\","
-    "\"unit_of_meas\":\"hPa\","
-    "\"val_tpl\":\"{{ value_json.pressure }}\","
-    "\"device\":%s}", 
-    UniqueID, StateTopic, DEVICE
-  );
-  client.publish(DiscoveryTopic, value, true);
-  Serial.println("P");
+  const char* p = "{\"name\":\"Pression\",\"uniq_id\":\"sta_p\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"device_class\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
+  
+  Serial.println("D-P1");
+  ok = client.publish("homeassistant/sensor/stationair_pressure/config", p, true);
+  Serial.println(ok ? "D-P2-OK" : "D-P2-FAIL");
   delay(200);
   
-  Serial.println("Discovery OK");
+  Serial.println("D-End");
 }
 
 
@@ -323,13 +284,8 @@ void reconnect_mqtt() {
     
     if (client.connect(clientId.c_str(), mqtt_user, mqtt_pass)) {
       Serial.println(" Connecté !");
-      
-      delay(500);
-      
-      if (!discoveryDone) {
-    publishMQTTDiscovery();
-    discoveryDone = true;
-  }
+      discoveryTimer = millis();  // Démarrer timer
+      discoveryDone = false;      // Réinitialiser
       
     } else {
       Serial.print(" Échec : ");
@@ -341,18 +297,15 @@ void reconnect_mqtt() {
 
 
 void publishSensorData(float temperature, float humidity, float co_ppm, float pressure) {
-  char value[300];
+  char payload[150];
   
-  sprintf(value, 
-    "{\"temperature\":%.1f,"
-    "\"humidity\":%.1f,"
-    "\"co\":%.1f,"
-    "\"pressure\":%.1f}", 
+  sprintf(payload, 
+    "{\"temperature\":%.1f,\"humidity\":%.1f,\"co\":%.1f,\"pressure\":%.1f}", 
     temperature, humidity, co_ppm, pressure
   );
   
-  client.publish(StateTopic, value);
-  Serial.println("Donnees publiees");
+  client.publish("homeassistant/sensor/stationair/state", payload);
+  Serial.print(".");
 }
 
 
@@ -478,7 +431,13 @@ void loop() {
     reconnect_mqtt();
   }
   client.loop();  // ✅ Appel régulier pour garder la connexion
-
+  
+// Publier Discovery 3 secondes APRÈS connexion
+  if (!discoveryDone && client.connected() && (millis() - discoveryTimer > 3000)) {
+    Serial.println("Publication Discovery depuis loop");
+    publishMQTTDiscovery();
+    discoveryDone = true;
+  }
   unsigned long now = millis();
 
   if ( now - lastMeasure > MESURE_INTERVAL) {
