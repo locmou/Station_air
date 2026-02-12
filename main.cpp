@@ -232,40 +232,73 @@ void setup_wifi() {
 
 
 void publishMQTTDiscovery() {
-
   if (!client.connected()) return;
 
-  Serial.println("D-Start");
+  Serial.println("Discovery Start");
 
-  client.publish("stationair/status","online",true);
-
+  // TEMPÉRATURE
   client.publish(
-    "homeassistant/sensor/stationair/temperature/config",
-    "{\"name\":\"Temperature\",\"uniq_id\":\"sta_t\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"°C\",\"val_tpl\":\"{{ value_json.temperature }}\"}",
-    true);
-client.loop();
+    "homeassistant/sensor/stationair_temp/config",
+    "{\"name\":\"Temperature\","
+    "\"uniq_id\":\"stationair_temp\","
+    "\"stat_t\":\"stationair/data\","
+    "\"avty_t\":\"stationair/status\","
+    "\"dev_cla\":\"temperature\","
+    "\"unit_of_meas\":\"°C\","
+    "\"val_tpl\":\"{{ value_json.temperature }}\","
+    "\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}",
+    true
+  );
+  client.loop();
   delay(100);
 
+  // HUMIDITÉ
   client.publish(
-    "homeassistant/sensor/stationair/humidity/config",
-    "{\"name\":\"Humidite\",\"uniq_id\":\"sta_h\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\"}",
-    true);
-client.loop();
+    "homeassistant/sensor/stationair_hum/config",
+    "{\"name\":\"Humidite\","
+    "\"uniq_id\":\"stationair_hum\","
+    "\"stat_t\":\"stationair/data\","
+    "\"avty_t\":\"stationair/status\","
+    "\"dev_cla\":\"humidity\","
+    "\"unit_of_meas\":\"%\","
+    "\"val_tpl\":\"{{ value_json.humidity }}\","
+    "\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}",
+    true
+  );
+  client.loop();
   delay(100);
 
+  // CO
   client.publish(
-    "homeassistant/sensor/stationair/co/config",
-    "{\"name\":\"CO\",\"uniq_id\":\"sta_c\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\"}",
-    true);
-client.loop();
+    "homeassistant/sensor/stationair_co/config",
+    "{\"name\":\"CO\","
+    "\"uniq_id\":\"stationair_co\","
+    "\"stat_t\":\"stationair/data\","
+    "\"avty_t\":\"stationair/status\","
+    "\"unit_of_meas\":\"ppm\","
+    "\"val_tpl\":\"{{ value_json.co }}\","
+    "\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}",
+    true
+  );
+  client.loop();
   delay(100);
 
+  // PRESSION
   client.publish(
-    "homeassistant/sensor/stationair/pressure/config",
-    "{\"name\":\"Pression\",\"uniq_id\":\"sta_p\",\"stat_t\":\"homeassistant/sensor/stationair/state\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\"}",
-    true);
-client.loop();
-  Serial.println("D-End");
+    "homeassistant/sensor/stationair_press/config",
+    "{\"name\":\"Pression\","
+    "\"uniq_id\":\"stationair_press\","
+    "\"stat_t\":\"stationair/data\","
+    "\"avty_t\":\"stationair/status\","
+    "\"dev_cla\":\"pressure\","
+    "\"unit_of_meas\":\"hPa\","
+    "\"val_tpl\":\"{{ value_json.pressure }}\","
+    "\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}",
+    true
+  );
+  client.loop();
+
+  Serial.println("Discovery End");
 }
 
 
@@ -274,21 +307,22 @@ void reconnect_mqtt() {
   while (!client.connected()) {
     Serial.print("Connexion au broker MQTT...");
     
-    String clientId = "ESP32_StationAir_";
-    clientId += String(random(0xffff), HEX);
-    
-    if (client.connect(clientId.c_str(),
-                   mqtt_user,
-                   mqtt_pass,
-                   "stationair/status",
-                   0,
-                   true,
-                   "offline")) {
+    if (client.connect("stationair",           // Client ID fixe
+                       mqtt_user,
+                       mqtt_pass,
+                       "stationair/status",    // Last Will topic
+                       0,                       // QoS
+                       true,                    // Retain
+                       "offline")) {            // Last Will message
+      
       Serial.println(" Connecté !");
+      
+      // Publier statut online
       client.publish("stationair/status", "online", true);
       client.loop();
-      discoveryTimer = millis();  // Démarrer timer
-      discoveryDone = false;      // Réinitialiser
+      
+      discoveryTimer = millis();
+      discoveryDone = false;
       
     } else {
       Serial.print(" Échec : ");
@@ -307,7 +341,7 @@ void publishSensorData(float temperature, float humidity, float co_ppm, float pr
     temperature, humidity, co_ppm, pressure
   );
   
-  client.publish("homeassistant/sensor/stationair/state", payload);
+  client.publish("stationair/data", payload, false);  // Topic unifié
   Serial.print(".");
 }
 
