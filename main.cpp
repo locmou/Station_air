@@ -11,6 +11,7 @@
 #include <PubSubClient.h>
 #define MQTT_MAX_PACKET_SIZE 1024
 #include "DHTesp.h" 
+#include <ArduinoJson.h>
 
 // Objets capteurs
 Adafruit_AHTX0 aht;
@@ -77,17 +78,24 @@ unsigned long discoveryTimer = 0;
 // Device ID unique
 const char* device_id = "stationair";
 
-// Topics de configuration (Discovery)
-const char* discovery_temp = "homeassistant/sensor/stationair/temperature/config";
-const char* discovery_hum = "homeassistant/sensor/stationair/humidity/config";
-const char* discovery_co = "homeassistant/sensor/stationair/co/config";
-const char* discovery_pressure = "homeassistant/sensor/stationair/pressure/config";
+// Discovery V2
+
+const char* discovery_temp = "homeassistant/sensor/stationair2/temperature/config";
+const char* discovery_hum  = "homeassistant/sensor/stationair2/humidity/config";
+const char* discovery_co   = "homeassistant/sensor/stationair2/co/config";
+const char* discovery_pressure = "homeassistant/sensor/stationair2/pressure/config";
+
+// State topics V2
+
+const char* state_base = "stationair2/data";
 
 // Topics d'état (données)
-const char* state_temp = "homeassistant/sensor/stationair/temperature/state";
-const char* state_hum = "homeassistant/sensor/stationair/humidity/state";
-const char* state_co = "homeassistant/sensor/stationair/co/state";
-const char* state_pressure = "homeassistant/sensor/stationair/pressure/state";
+
+
+const char* state_temp = "homeassistant/sensor/stationair2/temperature/state";
+const char* state_hum = "homeassistant/sensor/stationair2/humidity/state";
+const char* state_co = "homeassistant/sensor/stationair2/co/state";
+const char* state_pressure = "homeassistant/sensor/stationair2/pressure/state";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -231,74 +239,43 @@ void setup_wifi() {
 }
 
 
-void publishMQTTDiscovery() {
-    if (!client.connected()) {
-    Serial.println("MQTT non connecté, publication annulée.");
-    return;
-  }
-
-  Serial.println("D-Start");
-
-  // TEMPÉRATURE - TOUT SUR UNE LIGNE
- static unsigned long lastPublishTime = 0;
-  unsigned long now = millis();
-
-  if (now - lastPublishTime < 200) return;
-  lastPublishTime = now;
-
-  Serial.println("Publication du message de découverte pour la température...");
-  const char* payload_temp = "{\"name\":\"Temperature\",\"uniq_id\":\"stationair_temp\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"°C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
-
-  if (!client.publish(discovery_temp, payload_temp, true)) {
-    Serial.println("Échec de la publication !");
-    Serial.print("État du client MQTT : ");
-    Serial.println(client.state());
-  } else {
-    Serial.println("Message de découverte publié avec succès !");
-  }
-  client.loop();
-  
-  // HUMIDITÉ
-  client.publish("homeassistant/sensor/stationair/humidity/config", "{\"name\":\"Humidite\",\"uniq_id\":\"stationair_hum\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
-  Serial.println("H");
-  client.loop();
-  delay(50);
-
-  // CO
-  client.publish("homeassistant/sensor/stationair/co/config", "{\"name\":\"CO\",\"uniq_id\":\"stationair_co\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
-  Serial.println("C");
-  client.loop();
-  delay(50);
-
-  // PRESSION
-  client.publish("homeassistant/sensor/stationair/pressure/config", "{\"name\":\"Pression\",\"uniq_id\":\"stationair_press\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
-  Serial.println("P");
-  client.loop();
-delay(50);
-  Serial.println("D-End");
-}
-
-
 void reconnect_mqtt() {
   while (!client.connected()) {
     Serial.print("Connexion au broker MQTT...");
     
-    if (client.connect("stationair",           // Client ID fixe
+    if (client.connect("stationair",
                        mqtt_user,
                        mqtt_pass,
-                       "stationair/status",    // Last Will topic
-                       0,                       // QoS
-                       true,                    // Retain
-                       "offline")) {            // Last Will message
+                       "stationair/status",
+                       0,
+                       true,
+                       "offline")) {
       
       Serial.println(" Connecté !");
       
-      // Publier statut online
+      // 1. Status online
       client.publish("stationair/status", "online", true);
-      client.loop();
       
-      discoveryTimer = millis();
-      discoveryDone = false;
+      // 2. Discovery IMMÉDIATEMENT
+      Serial.println("D-Start");
+      
+client.publish(discovery_temp,
+"{\"name\":\"Temperature\",\"uniq_id\":\"stationair2_temp\",\"stat_t\":\"stationair2/data\",\"avty_t\":\"stationair2/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"°C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair2\"],\"name\":\"Station Air\"}}",
+true);      Serial.println("T");
+      
+      client.publish("homeassistant/sensor/stationair_hum/config", "{\"name\":\"Humidite\",\"uniq_id\":\"stationair_hum\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
+      Serial.println("H");
+      
+      client.publish("homeassistant/sensor/stationair_co/config", "{\"name\":\"CO\",\"uniq_id\":\"stationair_co\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
+      Serial.println("C");
+      
+      client.publish("homeassistant/sensor/stationair_press/config", "{\"name\":\"Pression\",\"uniq_id\":\"stationair_press\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
+      Serial.println("P");
+      
+      Serial.println("D-End");
+      
+      // 3. Première donnée (optionnel)
+      client.publish("stationair/data", "{\"temperature\":0,\"humidity\":0,\"co\":0,\"pressure\":0}", true);
       
     } else {
       Serial.print(" Échec : ");
@@ -310,15 +287,9 @@ void reconnect_mqtt() {
 
 
 void publishSensorData(float temperature, float humidity, float co_ppm, float pressure) {
-  char payload[150];
-  
-  sprintf(payload, 
-    "{\"temperature\":%.1f,\"humidity\":%.1f,\"co\":%.1f,\"pressure\":%.1f}", 
-    temperature, humidity, co_ppm, pressure
-  );
-  
-  client.publish("stationair/data", payload, false);  // Topic unifié
-  Serial.print(".");
+  char temp_payload[10];
+  sprintf(temp_payload, "%.1f", temperature);
+  client.publish("stationair/temp", temp_payload, true);
 }
 
 
@@ -364,6 +335,8 @@ void setup() {
   client.setServer(mqtt_server, mqtt_port);
   client.setKeepAlive(60);
   client.setSocketTimeout(5);
+client.publish("homeassistant/#","",true);
+client.publish("stationair/#","",true);
 
   
   // VÉRIFIER LA TAILLE DU BUFFER
@@ -444,12 +417,7 @@ void loop() {
   }
   client.loop();  // ✅ Appel régulier pour garder la connexion
   
-// Publier Discovery 3 secondes APRÈS connexion
-  if (!discoveryDone && client.connected() && (millis() - discoveryTimer > 3000)) {
-    Serial.println("Publication Discovery depuis loop");
-    publishMQTTDiscovery();
-    discoveryDone = true;
-  }
+
   unsigned long now = millis();
 
   if ( now - lastMeasure > MESURE_INTERVAL) {
@@ -473,6 +441,19 @@ void loop() {
     float rs = readRS(rawValue);
     float ratio = rs / Ro;
     float ppm = calculatePPM(ratio);
+
+JsonDocument doc;
+
+
+doc["temperature"] = tempAHT.temperature;
+doc["humidity"]    = humid.relative_humidity;
+doc["pressure"]    = press_hPa;
+doc["co"]          = ppm;
+
+char buffer[256];
+serializeJson(doc, buffer);
+
+client.publish("stationair2/data", buffer, false);
 
     // Affichage série
     Serial.println("===== Mesures =====");
