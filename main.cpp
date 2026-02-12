@@ -232,16 +232,30 @@ void setup_wifi() {
 
 
 void publishMQTTDiscovery() {
-  if (!client.connected()) return;
-
-
+    if (!client.connected()) {
+    Serial.println("MQTT non connecté, publication annulée.");
+    return;
+  }
 
   Serial.println("D-Start");
 
   // TEMPÉRATURE - TOUT SUR UNE LIGNE
- client.publish("homeassistant/sensor/stationair/temperature/config", "{\"name\":\"Temperature\",\"uniq_id\":\"stationair_temp\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
-    Serial.println("T");
-  delay(50);
+ static unsigned long lastPublishTime = 0;
+  unsigned long now = millis();
+
+  if (now - lastPublishTime < 200) return;
+  lastPublishTime = now;
+
+  Serial.println("Publication du message de découverte pour la température...");
+  const char* payload_temp = "{\"name\":\"Temperature\",\"uniq_id\":\"stationair_temp\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"°C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}";
+
+  if (!client.publish(discovery_temp, payload_temp, true)) {
+    Serial.println("Échec de la publication !");
+    Serial.print("État du client MQTT : ");
+    Serial.println(client.state());
+  } else {
+    Serial.println("Message de découverte publié avec succès !");
+  }
   client.loop();
   
   // HUMIDITÉ
