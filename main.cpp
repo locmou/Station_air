@@ -234,39 +234,33 @@ void setup_wifi() {
 void publishMQTTDiscovery() {
   if (!client.connected()) return;
 
-  static unsigned long lastPublishTime = 0;
-  unsigned long now = millis();
 
-  if (now - lastPublishTime < 200) return;  // Attendre 200ms entre chaque message
-  lastPublishTime = now;
 
   Serial.println("D-Start");
 
   // TEMPÉRATURE - TOUT SUR UNE LIGNE
-  if (client.publish("homeassistant/sensor/stationair_temp/config", "{\"name\":\"Temperature\",\"uniq_id\":\"stationair_temp\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true)){
+ client.publish("homeassistant/sensor/stationair/temperature/config", "{\"name\":\"Temperature\",\"uniq_id\":\"stationair_temp\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"temperature\",\"unit_of_meas\":\"C\",\"val_tpl\":\"{{ value_json.temperature }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
     Serial.println("T");
-  } else {
-    Serial.println("Failed to publish temperature discovery!");
-  }
+  delay(50);
   client.loop();
   
   // HUMIDITÉ
-  client.publish("homeassistant/sensor/stationair_hum/config", "{\"name\":\"Humidite\",\"uniq_id\":\"stationair_hum\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
+  client.publish("homeassistant/sensor/stationair/humidity/config", "{\"name\":\"Humidite\",\"uniq_id\":\"stationair_hum\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"humidity\",\"unit_of_meas\":\"%\",\"val_tpl\":\"{{ value_json.humidity }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
   Serial.println("H");
   client.loop();
-  delay(200);
+  delay(50);
 
   // CO
-  client.publish("homeassistant/sensor/stationair_co/config", "{\"name\":\"CO\",\"uniq_id\":\"stationair_co\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
+  client.publish("homeassistant/sensor/stationair/co/config", "{\"name\":\"CO\",\"uniq_id\":\"stationair_co\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"unit_of_meas\":\"ppm\",\"val_tpl\":\"{{ value_json.co }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
   Serial.println("C");
   client.loop();
-  delay(200);
+  delay(50);
 
   // PRESSION
-  client.publish("homeassistant/sensor/stationair_press/config", "{\"name\":\"Pression\",\"uniq_id\":\"stationair_press\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
+  client.publish("homeassistant/sensor/stationair/pressure/config", "{\"name\":\"Pression\",\"uniq_id\":\"stationair_press\",\"stat_t\":\"stationair/data\",\"avty_t\":\"stationair/status\",\"dev_cla\":\"pressure\",\"unit_of_meas\":\"hPa\",\"val_tpl\":\"{{ value_json.pressure }}\",\"device\":{\"ids\":[\"stationair\"],\"name\":\"Station Air\"}}", true);
   Serial.println("P");
   client.loop();
-
+delay(50);
   Serial.println("D-End");
 }
 
@@ -354,8 +348,8 @@ void setup() {
 
    // Configuration MQTT
   client.setServer(mqtt_server, mqtt_port);
-  client.setKeepAlive(120);
-  client.setSocketTimeout(10);
+  client.setKeepAlive(60);
+  client.setSocketTimeout(5);
 
   
   // VÉRIFIER LA TAILLE DU BUFFER
