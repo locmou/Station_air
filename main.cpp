@@ -435,13 +435,22 @@ void loop() {
   }
 
   // ===== VÉRIFICATION MQTT (non bloquante) =====
+  static bool wasMqttDisconnected = false;  // Pour savoir si on doit effacer le message
+
   if (!client.connected()) {
     // Affichage sur LCD pour informer l'utilisateur
     lcd.setCursor(0, 1);
     lcd.print("MQTT deconnecte    ");
+    wasMqttDisconnected = true;
     
-    reconnect_mqtt();  // ← Maintenant NON BLOQUANT
+    reconnect_mqtt();
   } else {
+    // Effacer le message de déconnexion si on vient de se reconnecter
+    if (wasMqttDisconnected) {
+      lcd.setCursor(0, 1);
+      lcd.print("                   ");  // Effacer la ligne
+      wasMqttDisconnected = false;
+    }
     client.loop();
   }
   
