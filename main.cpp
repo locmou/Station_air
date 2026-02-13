@@ -1,42 +1,34 @@
 #include <Arduino.h>
-
 #include <LiquidCrystal_I2C.h>
-
 #include <Wire.h>
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_BMP280.h>
-
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #define MQTT_MAX_PACKET_SIZE 1700
 #include <PubSubClient.h>
-
-
 #include <ArduinoJson.h>
 
-// Objets capteurs
+// ========== OBJETS CAPTEURS ==========
 Adafruit_AHTX0 aht;
-Adafruit_BMP280 bmp;   // I2C
+Adafruit_BMP280 bmp;  //I2C
 
 // ---------- CONFIG LCD ----------
 LiquidCrystal_I2C lcd(0x27, 20, 4); // Adapter l'adresse I2C (0x27 ou 0x3F)
 
 //Définition des contrastes
 #define BRIGHTNESS_PIN 5   // Must be a PWM pin
-
 // Définir la broche 33 comme entrée analogique
 #define LDR 33
 uint8_t bright;
 
 // ---------- CONFIG MQ-7 / ESP32 ----------
 #define MQ7_PIN 34              // Entrée analogique
-#define MESURE_INTERVAL 10000    // ms entre deux mesures + publication
+#define MESURE_INTERVAL 300000    // ms entre deux mesures + publication
 #define RL_VALUE 10.0           // Résistance de charge en kOhms (10kΩ sur Flying Fish)
 #define RO_CLEAN_AIR_FACTOR 27.5 // Ratio RS/RO dans l'air pur pour MQ7
 #define ADC_RESOLUTION 4095.0   // Résolution ADC 12 bits ESP32
-
 float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, à calibrer)
-
 unsigned long lastMeasure = 0;
 
 // Caractères personnalisés optimisés pour chiffres LCD
@@ -49,31 +41,33 @@ byte LR[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11110, B11100};  
 byte MB[8] = {B11111, B11111, B11111, B00000, B00000, B00000, B11111, B11111};  // 6: Middle Bar
 byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}; // 7: Full Block
 
+// ========== VARIABLES AFFICHAGE LCD ==========
 // Variables pour l'alternance d'affichage
 unsigned long lastDisplayChange = 0;
 const unsigned long DISPLAY_DURATION = 9000;  // 5 secondes
 bool showBigPPM = true;  // true = afficher PPM, false = afficher détails
-
 // Variables pour le défilement des infos
 unsigned long lastInfoChange = 0;
 const unsigned long INFO_DURATION = 3000;  // 3sec par info
 int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
 int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
 
-// ---------- OBJET WiFiMulti ----------
+// ========== CONFIG WIFI ==========
 WiFiMulti wifiMulti;
 
-// ---------- CONFIG MQTT ----------
+// ========== CONFIG MQTT ==========
 const char* mqtt_server = "192.168.1.11";
 const int   mqtt_port   = 1883;
 const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
+/*
 bool discoveryPublished = false;
 char DEVICE[300];
 char ESP_ID[15];
 char StateTopic[50];
 bool discoveryDone = false;
 unsigned long discoveryTimer = 0;
+*/
 
 // ========== MESSAGES DISCOVERY EN PROGMEM ==========
 // Stockage en Flash au lieu de RAM pour économiser la mémoire
@@ -137,20 +131,17 @@ PubSubClient client(espClient);
 
 /**********************************VOID RETROECLAIRAGE*************************************** */
 void Retroeclairage(){
-  //réglage de l'intensité lumineus du LCD selon la lumière ambiante
+  //réglage de l'intensité lumineuse du LCD selon la lumière ambiante
   bright=(analogRead(LDR)/4);
   analogWrite(BRIGHTNESS_PIN, bright);
-  }
+}
 
 /**********************************Lecture mq7************************************************ */
 float readRS(int adcValue) {
-  
   // Conversion ADC vers tension (0-3.3V sur ESP32)
-  float voltage = (adcValue / ADC_RESOLUTION) * 3.3;
-  
+  float voltage = (adcValue / ADC_RESOLUTION) * 3.3; 
   // Calcul de RS : RS = [(Vc × RL) / Vout] - RL
   float rs = ((3.3 * RL_VALUE) / voltage) - RL_VALUE;
-  
   return rs;
 }
 
@@ -233,7 +224,6 @@ void printBigNumber(int number) {
 
 void setup_wifi() {
   
-  Serial.println();
   Serial.println("=== Connexion WiFi ===");
 
   WiFi.mode(WIFI_STA); // Mode Station (client WiFi)
@@ -381,58 +371,19 @@ void reconnect_mqtt() {
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
 void setup() {
-
-// Désactiver le watchdog pendant l'init
-disableCore0WDT();
-
-  Serial.begin(115200);  // Démarrer le port série pour voir les messages
+  disableCore0WDT();
+  Serial.begin(115200);
   delay(1000);
 
-  // Connexion WiFi
   setup_wifi();
 
-    // Créer l'ID unique de l'appareil
-  byte mac[6];
-  WiFi.macAddress(mac);
-  sprintf(ESP_ID, "%02x%02x%02x%02x%02x", mac[4], mac[3], mac[2], mac[1], mac[0]);
-  Serial.print("RAM libre : ");
-  Serial.print(ESP.getFreeHeap());
-  Serial.println(" bytes");
+  // Configuration MQTT
+  client.setBufferSize(1700);
+  client.setServer(mqtt_server, mqtt_port);
+  client.setKeepAlive(60);
+  client.setSocketTimeout(5);
 
-  // Créer le JSON DEVICE
-  String nomRouteur = "Station Air";
-  String mdl = "ESP32-" + String(ESP_ID);
-  String mf = "DIY";
-  String hw = String(ESP.getChipModel());
-  String sw = "v1.0";
-  String cu = "http://" + WiFi.localIP().toString();
-  
-  sprintf(DEVICE, 
-    "{\"ids\":\"%s\","
-    "\"name\":\"%s\","
-    "\"mdl\":\"%s\","
-    "\"mf\":\"%s\","
-    "\"hw\":\"%s\","
-    "\"sw\":\"%s\","
-    "\"cu\":\"%s\"}", 
-    ESP_ID, nomRouteur.c_str(), mdl.c_str(), mf.c_str(), hw.c_str(), sw.c_str(), cu.c_str()
-  );
-  
-  sprintf(StateTopic, "homeassistant/sensor/stationair/state");
-
-   // Configuration MQTT
-// Dans setup(), AVANT client.setServer()
-client.setBufferSize(1700);
-client.setServer(mqtt_server, mqtt_port);
-client.setKeepAlive(60);
-client.setSocketTimeout(5);
-   Serial.print("Buffer MQTT configuré : ");
-  Serial.println(client.getBufferSize());  // ← AJOUTER pour vérifier
-  
-  
-  Serial.println("Configuration MQTT terminée");
-
-  // Déclaration des broches
+  // Pins
   pinMode(BRIGHTNESS_PIN, OUTPUT);
   pinMode(LDR, INPUT);
 
@@ -440,8 +391,6 @@ client.setSocketTimeout(5);
   lcd.init();
   lcd.backlight();
   lcd.clear();
-
-  // Créer les caractères personnalisés
   lcd.createChar(0, LT);
   lcd.createChar(1, UB);
   lcd.createChar(2, RT);
@@ -451,38 +400,33 @@ client.setSocketTimeout(5);
   lcd.createChar(6, MB);
   lcd.createChar(7, block);
 
-  // Init I2C sur les pins ESP32 (21 = SDA, 22 = SCL)
+  // I2C
   Wire.begin(21, 22);
-  Serial.println("Init AHT20 + BMP280");
+  Serial.println("Init capteurs I2C...");
 
-
-  // --- AHT20 ---
-  if (!aht.begin()) {          // auto‑détection AHT10/AHT20 à l'adresse I2C 0x38[web:2]
-  Serial.println("Erreur: AHT20 non detecte, verifier le cablage !");
-  while (1) delay(10);
+  // AHT20
+  if (!aht.begin()) {
+    Serial.println("ERREUR: AHT20 non détecté !");
+    while (1) delay(10);
   }
   Serial.println("AHT20 OK");
 
-  // --- BMP280 ---
-  // Adresse I2C la plus fréquente : 0x76 ; si échec, essayer 0x77[web:1][web:3]
-  if (!bmp.begin(0x76)) {
-    Serial.println("BMP280 0x76 non detecte, essai 0x77...");
-    if (!bmp.begin(0x77)) {
-      Serial.println("Erreur: BMP280 non detecte, verifier le cablage/adresse !");
-      while (1) delay(10);
-    }
+  // BMP280
+  if (!bmp.begin(0x76) && !bmp.begin(0x77)) {
+    Serial.println("ERREUR: BMP280 non détecté !");
+    while (1) delay(10);
   }
   Serial.println("BMP280 OK");
 
-  // Configuration BMP280 (exemple de réglages "classiques")[web:1]
   bmp.setSampling(
     Adafruit_BMP280::MODE_NORMAL,
-    Adafruit_BMP280::SAMPLING_X2,   // temp
-    Adafruit_BMP280::SAMPLING_X16,  // pression
+    Adafruit_BMP280::SAMPLING_X2,
+    Adafruit_BMP280::SAMPLING_X16,
     Adafruit_BMP280::FILTER_X16,
     Adafruit_BMP280::STANDBY_MS_500
   );
   
+  Serial.println("Setup terminé !");
 } 
 
 
@@ -495,11 +439,11 @@ client.setSocketTimeout(5);
 void loop() {
   // Vérifier WiFi
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi déconnecté, reconnexion...");
+    Serial.println("WiFi perdu, reconnexion...");
     setup_wifi();
   }
 
-  // Maintien connexion MQTT
+  // Vérifier MQTT
   if (!client.connected()) {
     reconnect_mqtt();
   }
@@ -507,24 +451,19 @@ void loop() {
   
   unsigned long now = millis();
 
+  // Mesures et publication périodique
   if (now - lastMeasure > MESURE_INTERVAL) {
     lastMeasure = now;
     
-    // Republier status périodiquement
     client.publish("stationair/status", "online", true);
 
-    // Réglage LED rétroéclairage
     Retroeclairage();
 
-    // Lecture AHT20
+    // Lecture capteurs
     sensors_event_t humid, tempAHT;
     aht.getEvent(&humid, &tempAHT);
-
-    // Lecture BMP280
-    float tempBMP = bmp.readTemperature();
     float press_hPa = bmp.readPressure() / 100.0F;
-
-    // Lecture MQ-7
+    
     int rawValue = analogRead(MQ7_PIN);
     float rs = readRS(rawValue);
     float ratio = rs / Ro;
@@ -533,9 +472,9 @@ void loop() {
     // Publication MQTT
     JsonDocument doc;
     doc["temperature"] = tempAHT.temperature;
-    doc["humidity"]    = humid.relative_humidity;
-    doc["pressure"]    = press_hPa;
-    doc["co"]          = ppm;
+    doc["humidity"] = humid.relative_humidity;
+    doc["pressure"] = press_hPa;
+    doc["co"] = ppm;
 
     char buffer[256];
     serializeJson(doc, buffer);
@@ -543,22 +482,17 @@ void loop() {
 
     // Affichage série
     Serial.println("===== Mesures =====");
-    Serial.print("AHT20  - T: "); Serial.print(tempAHT.temperature, 1);
-    Serial.print(" °C  |  RH: "); Serial.println(humid.relative_humidity);
-    Serial.print("BMP280 - T: "); Serial.print(tempBMP);
-    Serial.print(" °C  |  P: "); Serial.println(press_hPa);
-    Serial.print("MQ-7   - CO: "); Serial.print(ppm); Serial.println(" ppm");
-    Serial.println();
+    Serial.printf("T: %.1f°C | H: %.1f%% | P: %.0fhPa | CO: %.0fppm\n",
+                  tempAHT.temperature, humid.relative_humidity, press_hPa, ppm);
 
-    // Affichage LCD lignes 0 et 1
-    lcd.setCursor(0, 0); lcd.print("Tmp:"); lcd.print(tempAHT.temperature, 1); lcd.print("C ");
-    lcd.setCursor(10, 0); lcd.print("Hum:"); lcd.print(humid.relative_humidity, 1); lcd.print("% ");
-    lcd.setCursor(0, 1); lcd.print("Brgt:"); lcd.print(bright); lcd.print("   ");
-    lcd.setCursor(10, 1); lcd.print("P:"); lcd.print(press_hPa, 0); lcd.print("hPa");
+    // LCD ligne 0-1
+    lcd.setCursor(0, 0); 
+    lcd.printf("Tmp:%.1fC Hum:%.1f%%", tempAHT.temperature, humid.relative_humidity);
+    lcd.setCursor(0, 1); 
+    lcd.printf("Brgt:%-3d P:%.0fhPa", bright, press_hPa);
   }
 
-  // ========== GESTION AFFICHAGE LCD LIGNES 2-3 (en continu) ==========
-  // Relecture MQ7 pour affichage en temps réel
+  // Affichage LCD lignes 2-3 (temps réel)
   int rawValue = analogRead(MQ7_PIN);
   float rs = readRS(rawValue);
   float ratio = rs / Ro;
@@ -572,7 +506,6 @@ void loop() {
     lastInfoChange = now;
   }
 
-  // Affichage selon le mode
   if (showBigPPM) {
     if (lastDisplayedInfo != -2) {
       lcd.setCursor(0, 2); lcd.print("                    ");
@@ -582,13 +515,10 @@ void loop() {
       lcd.setCursor(17, 3); lcd.print("ppm");
       lastDisplayedInfo = -2;
     }
-    
   } else {
-    // Défilement des infos
     if (now - lastInfoChange >= INFO_DURATION) {
       lastInfoChange = now;
-      currentInfo++;
-      if (currentInfo > 2) currentInfo = 0;
+      currentInfo = (currentInfo + 1) % 3;
     }
     
     if (lastDisplayedInfo != currentInfo) {
@@ -598,11 +528,11 @@ void loop() {
       switch(currentInfo) {
         case 0:
           lcd.setCursor(0, 2); lcd.print("RS (Resistance):");
-          lcd.setCursor(0, 3); lcd.print(rs, 2); lcd.print(" kOhms");
+          lcd.setCursor(0, 3); lcd.printf("%.2f kOhms", rs);
           break;
         case 1:
           lcd.setCursor(0, 2); lcd.print("Ratio RS/Ro:");
-          lcd.setCursor(0, 3); lcd.print(ratio, 2);
+          lcd.setCursor(0, 3); lcd.printf("%.2f", ratio);
           break;
         case 2:
           lcd.setCursor(0, 2); lcd.print("Valeur brute ADC:");
