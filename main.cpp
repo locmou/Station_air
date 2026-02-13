@@ -60,14 +60,14 @@ const char* mqtt_server = "192.168.1.11";
 const int   mqtt_port   = 1883;
 const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
-/*
-bool discoveryPublished = false;
-char DEVICE[300];
-char ESP_ID[15];
-char StateTopic[50];
-bool discoveryDone = false;
-unsigned long discoveryTimer = 0;
-*/
+
+// ========== AJOUT : Variables pour gestion des reconnexions ==========
+unsigned long lastWifiCheck = 0;
+unsigned long lastMqttCheck = 0;
+const unsigned long WIFI_CHECK_INTERVAL = 30000;   // Vérifier WiFi toutes les 30s
+const unsigned long MQTT_RETRY_INTERVAL = 30000;   // Réessayer MQTT toutes les 30s
+int mqttReconnectAttempts = 0;
+const int MAX_MQTT_ATTEMPTS = 3;                   // Max 3 tentatives avant d'abandonner temporairement
 
 // ========== MESSAGES DISCOVERY EN PROGMEM ==========
 // Stockage en Flash au lieu de RAM pour économiser la mémoire
@@ -244,122 +244,99 @@ void setup_wifi() {
 
   // Boucle jusqu'à connexion sur l'un des réseaux
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println();
-    Serial.println("WiFi connecté !");
-    Serial.print("Adresse IP : ");
+    Serial.println("\nWiFi connecté !");
+    Serial.print("IP : ");
     Serial.println(WiFi.localIP());
-    Serial.print("SSID : ");
-    Serial.println(WiFi.SSID());
   } else {
-    Serial.println();
-    Serial.println("Échec de connexion WiFi !");
+    Serial.println("\nÉchec WiFi ! Réessai dans 30s...");
   }
 }
 
 
 void reconnect_mqtt() {
-  while (!client.connected()) {
-    Serial.print("Connexion au broker MQTT...");
+
+  // Ne tenter la reconnexion que toutes les 30 secondes
+  unsigned long now = millis();
+  if (now - lastMqttCheck < MQTT_RETRY_INTERVAL) {
+    return;  // ← Pas encore le moment de réessayer
+  }
+  
+  lastMqttCheck = now;
+  mqttReconnectAttempts++;
+
+  Serial.print("Tentative MQTT ");
+  Serial.print(mqttReconnectAttempts);
+  Serial.print("/");
+  Serial.print(MAX_MQTT_ATTEMPTS);
+  Serial.print("...");
+
+
+  if (client.connect("stationair", mqtt_user, mqtt_pass,
+                     "stationair/status", 0, true, "offline")) {
     
-    if (client.connect("stationair",
-                       mqtt_user,
-                       mqtt_pass,
-                       "stationair/status",
-                       0,
-                       true,
-                       "offline")) {
-      
-      Serial.println(" Connecté !");
-      Serial.print("Buffer size actuel: ");
-      Serial.println(client.getBufferSize());
-      
-      // Status online
-      client.publish("stationair/status", "online", true);
-      client.loop();
-      delay(100);
-      
-      Serial.println("D-Start");
-      
-      // Temperature
-      Serial.print("Temp...");
-      memset(mqttBuffer, 0, sizeof(mqttBuffer));
-      strcpy_P(mqttBuffer, discovery_temp_json);
-      Serial.print(strlen(mqttBuffer)); Serial.print("b...");
-      
-      // Publier sans attendre la confirmation (QoS 0)
-      if (client.beginPublish("homeassistant/sensor/stationair_temp/config", strlen(mqttBuffer), true)) {
-        client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-        client.endPublish();
-        Serial.println("OK");
-      } else {
-        Serial.println("FAIL");
-      }
-      
-      client.loop();
-      delay(500);  // Délai plus long
-      
-      // Humidity
-      Serial.print("Hum...");
-      memset(mqttBuffer, 0, sizeof(mqttBuffer));
-      strcpy_P(mqttBuffer, discovery_hum_json);
-      Serial.print(strlen(mqttBuffer)); Serial.print("b...");
-      
-      if (client.beginPublish("homeassistant/sensor/stationair_hum/config", strlen(mqttBuffer), true)) {
-        client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-        client.endPublish();
-        Serial.println("OK");
-      } else {
-        Serial.println("FAIL");
-      }
-      
-      client.loop();
-      delay(500);
-      
-      // CO
-      Serial.print("CO...");
-      memset(mqttBuffer, 0, sizeof(mqttBuffer));
-      strcpy_P(mqttBuffer, discovery_co_json);
-      Serial.print(strlen(mqttBuffer)); Serial.print("b...");
-      
-      if (client.beginPublish("homeassistant/sensor/stationair_co/config", strlen(mqttBuffer), true)) {
-        client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-        client.endPublish();
-        Serial.println("OK");
-      } else {
-        Serial.println("FAIL");
-      }
-      
-      client.loop();
-      delay(500);
-      
-      // Pressure
-      Serial.print("Press...");
-      memset(mqttBuffer, 0, sizeof(mqttBuffer));
-      strcpy_P(mqttBuffer, discovery_press_json);
-      Serial.print(strlen(mqttBuffer)); Serial.print("b...");
-      
-      if (client.beginPublish("homeassistant/sensor/stationair_press/config", strlen(mqttBuffer), true)) {
-        client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-        client.endPublish();
-        Serial.println("OK");
-      } else {
-        Serial.println("FAIL");
-      }
-      
-      client.loop();
-      Serial.println("D-End");
-      
-      // Première donnée
-      client.publish("stationair/data", 
-                     "{\"temperature\":0,\"humidity\":0,\"co\":0,\"pressure\":0}", 
-                     true);
-      
-      break;  // Sortir du while après succès
-      
-    } else {
-      Serial.print(" Échec : ");
-      Serial.println(client.state());
-      delay(5000);
+    Serial.println(" OK !");
+    mqttReconnectAttempts = 0;  // Reset compteur
+    
+    client.publish("stationair/status", "online", true);
+    client.loop();
+    delay(100);
+    
+    Serial.println("Discovery...");
+    
+    // Temperature
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_temp_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_temp/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // Humidity
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_hum_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_hum/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // CO
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_co_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_co/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // Pressure
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_press_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_press/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    
+    Serial.println("Discovery OK");
+    
+    client.publish("stationair/data", 
+                   "{\"temperature\":0,\"humidity\":0,\"co\":0,\"pressure\":0}", 
+                   true);
+    
+  } else {
+    Serial.print(" Échec (");
+    Serial.print(client.state());
+    Serial.println(")");
+    
+    // Après MAX_MQTT_ATTEMPTS échecs, attendre plus longtemps
+    if (mqttReconnectAttempts >= MAX_MQTT_ATTEMPTS) {
+      Serial.println("Trop d'échecs MQTT, pause de 2 minutes...");
+      mqttReconnectAttempts = 0;
+      lastMqttCheck = millis() + 120000;  // Attendre 2 minutes supplémentaires
     }
   }
 }
@@ -437,26 +414,41 @@ void setup() {
 /*********************************************LOOP ************************************************ */
 
 void loop() {
-  // Vérifier WiFi
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi perdu, reconnexion...");
-    setup_wifi();
-  }
-
-  // Vérifier MQTT
-  if (!client.connected()) {
-    reconnect_mqtt();
-  }
-  client.loop();
-  
   unsigned long now = millis();
+  
+  // ===== VÉRIFICATION WIFI (toutes les 30s) =====
+  if (now - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
+    lastWifiCheck = now;
+    
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi perdu, reconnexion...");
+      lcd.setCursor(0, 0);
+      lcd.print("WiFi perdu...      ");
+      setup_wifi();
+      
+      // Si reconnexion réussie, réinitialiser MQTT
+      if (WiFi.status() == WL_CONNECTED) {
+        mqttReconnectAttempts = 0;
+        lastMqttCheck = 0;  // Forcer reconnexion MQTT immédiate
+      }
+    }
+  }
 
-  // Mesures et publication périodique
+  // ===== VÉRIFICATION MQTT (non bloquante) =====
+  if (!client.connected()) {
+    // Affichage sur LCD pour informer l'utilisateur
+    lcd.setCursor(0, 1);
+    lcd.print("MQTT deconnecte    ");
+    
+    reconnect_mqtt();  // ← Maintenant NON BLOQUANT
+  } else {
+    client.loop();
+  }
+  
+  // ===== MESURES PÉRIODIQUES =====
   if (now - lastMeasure > MESURE_INTERVAL) {
     lastMeasure = now;
     
-    client.publish("stationair/status", "online", true);
-
     Retroeclairage();
 
     // Lecture capteurs
@@ -469,17 +461,6 @@ void loop() {
     float ratio = rs / Ro;
     float ppm = calculatePPM(ratio);
 
-    // Publication MQTT
-    JsonDocument doc;
-    doc["temperature"] = tempAHT.temperature;
-    doc["humidity"] = humid.relative_humidity;
-    doc["pressure"] = press_hPa;
-    doc["co"] = ppm;
-
-    char buffer[256];
-    serializeJson(doc, buffer);
-    client.publish("stationair/data", buffer, true);
-
     // Affichage série
     Serial.println("===== Mesures =====");
     Serial.printf("T: %.1f°C | H: %.1f%% | P: %.0fhPa | CO: %.0fppm\n",
@@ -488,11 +469,41 @@ void loop() {
     // LCD ligne 0-1
     lcd.setCursor(0, 0); 
     lcd.printf("Tmp:%.1fC Hum:%.1f%%", tempAHT.temperature, humid.relative_humidity);
-    lcd.setCursor(0, 1); 
-    lcd.printf("Brgt:%-3d P:%.0fhPa", bright, press_hPa);
+    lcd.setCursor(0, 1);
+    
+    // Afficher statut connexion
+    if (WiFi.status() != WL_CONNECTED) {
+      lcd.print("WiFi:OFF ");
+    } else if (!client.connected()) {
+      lcd.print("MQTT:OFF ");
+    } else {
+      lcd.printf("P:%.0fhPa", press_hPa);
+    }
+    
+    // Publication MQTT seulement si connecté
+    if (client.connected()) {
+      client.publish("stationair/status", "online", true);
+      
+      JsonDocument doc;
+      doc["temperature"] = tempAHT.temperature;
+      doc["humidity"] = humid.relative_humidity;
+      doc["pressure"] = press_hPa;
+      doc["co"] = ppm;
+
+      char buffer[256];
+      serializeJson(doc, buffer);
+      
+      if (client.publish("stationair/data", buffer, true)) {
+        Serial.println("MQTT: Données publiées");
+      } else {
+        Serial.println("MQTT: Échec publication");
+      }
+    } else {
+      Serial.println("MQTT: Non connecté, données non publiées");
+    }
   }
 
-  // Affichage LCD lignes 2-3 (temps réel)
+  // ===== AFFICHAGE LCD LIGNES 2-3 (continue même sans WiFi/MQTT) =====
   int rawValue = analogRead(MQ7_PIN);
   float rs = readRS(rawValue);
   float ratio = rs / Ro;
