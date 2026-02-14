@@ -63,9 +63,8 @@ const char* mqtt_pass = "vgo:?2258H";
 
 // ========== AJOUT : Variables pour gestion des reconnexions ==========
 unsigned long lastWifiCheck = 0;
-unsigned long lastMqttCheck = 0;
+unsigned long lastClientLoop = 0; 
 const unsigned long WIFI_CHECK_INTERVAL = 30000;   // Vérifier WiFi toutes les 30s
-const unsigned long MQTT_RETRY_INTERVAL = 30000;   // Réessayer MQTT toutes les 30s
 int mqttReconnectAttempts = 0;
 const int MAX_MQTT_ATTEMPTS = 3;                   // Max 3 tentatives avant d'abandonner temporairement
 
@@ -255,13 +254,6 @@ void setup_wifi() {
 
 void reconnect_mqtt() {
 
-  // Ne tenter la reconnexion que toutes les 30 secondes
-  unsigned long now = millis();
-  if (now - lastMqttCheck < MQTT_RETRY_INTERVAL) {
-    return;  // ← Pas encore le moment de réessayer
-  }
-  
-  lastMqttCheck = now;
   mqttReconnectAttempts++;
 
   Serial.print("Tentative MQTT ");
@@ -334,9 +326,9 @@ void reconnect_mqtt() {
     
     // Après MAX_MQTT_ATTEMPTS échecs, attendre plus longtemps
     if (mqttReconnectAttempts >= MAX_MQTT_ATTEMPTS) {
-      Serial.println("Trop d'échecs MQTT, pause de 2 minutes...");
+      Serial.println("Trop d'échecs MQTT, pause jusqu'au prochain cycle");
       mqttReconnectAttempts = 0;
-      lastMqttCheck = millis() + 120000;  // Attendre 2 minutes supplémentaires
+
     }
   }
 }
@@ -416,50 +408,45 @@ void setup() {
 void loop() {
   unsigned long now = millis();
   
-  // ===== VÉRIFICATION WIFI (toutes les 30s) =====
+  // ===== CLIENT.LOOP() TOUTES LES SECONDES et ajustement éclairage =====
+  if (now - lastClientLoop >= 1000) {
+    lastClientLoop = now;
+    if (client.connected()) {
+      client.loop();
+    }
+    //ajuste en permanence l'intensité du rétroéclairage
+    Retroeclairage();
+  }
+
+  // ===== VÉRIFICATION WIFI + MQTT TOUTES LES 30 SECONDES =====
   if (now - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
     lastWifiCheck = now;
     
+    // 1. Vérifier WiFi
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi perdu, reconnexion...");
-      lcd.setCursor(0, 0);
-      lcd.print("WiFi perdu...      ");
+      lcd.setCursor(0, 1);
+      lcd.print("WiFi OFF - Reconnex");
       setup_wifi();
       
-      // Si reconnexion réussie, réinitialiser MQTT
       if (WiFi.status() == WL_CONNECTED) {
-        mqttReconnectAttempts = 0;
-        lastMqttCheck = 0;  // Forcer reconnexion MQTT immédiate
+        mqttReconnectAttempts = 0;  // Reset si WiFi revient
       }
     }
-  }
-
-  // ===== VÉRIFICATION MQTT (non bloquante) =====
-  static bool wasMqttDisconnected = false;  // Pour savoir si on doit effacer le message
-
-  if (!client.connected()) {
-    // Affichage sur LCD pour informer l'utilisateur
-    lcd.setCursor(0, 1);
-    lcd.print("MQTT deconnecte    ");
-    wasMqttDisconnected = true;
     
-    reconnect_mqtt();
-  } else {
-    // Effacer le message de déconnexion si on vient de se reconnecter
-    if (wasMqttDisconnected) {
+    // 2. Vérifier MQTT (seulement si WiFi OK)
+    if (WiFi.status() == WL_CONNECTED && !client.connected()) {
+      Serial.println("MQTT déconnecté, reconnexion...");
       lcd.setCursor(0, 1);
-      lcd.print("                   ");  // Effacer la ligne
-      wasMqttDisconnected = false;
+      lcd.print("MQTT OFF - Reconnex");
+      reconnect_mqtt();
     }
-    client.loop();
   }
-  
-  // ===== MESURES PÉRIODIQUES =====
+
+// ===== MESURES PÉRIODIQUES (toutes les 5 minutes) =====
   if (now - lastMeasure > MESURE_INTERVAL) {
     lastMeasure = now;
     
-    Retroeclairage();
-
     // Lecture capteurs
     sensors_event_t humid, tempAHT;
     aht.getEvent(&humid, &tempAHT);
@@ -480,13 +467,14 @@ void loop() {
     lcd.printf("Tmp:%.1fC Hum:%.1f%%", tempAHT.temperature, humid.relative_humidity);
     lcd.setCursor(0, 1);
     
+    
     // Afficher statut connexion
     if (WiFi.status() != WL_CONNECTED) {
       lcd.print("WiFi:OFF ");
     } else if (!client.connected()) {
       lcd.print("MQTT:OFF ");
     } else {
-      lcd.printf("P:%.0fhPa", press_hPa);
+      lcd.printf("P:%.0f Lum:%-3d    ", press_hPa, bright);
     }
     
     // Publication MQTT seulement si connecté
