@@ -67,6 +67,7 @@ unsigned long lastClientLoop = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 30000;   // Vérifier WiFi toutes les 30s
 int mqttReconnectAttempts = 0;
 const int MAX_MQTT_ATTEMPTS = 3;                   // Max 3 tentatives avant d'abandonner temporairement
+static bool mqttWasDisconnected = false;  
 
 // ========== MESSAGES DISCOVERY EN PROGMEM ==========
 // Stockage en Flash au lieu de RAM pour économiser la mémoire
@@ -416,6 +417,8 @@ void loop() {
     }
     //ajuste en permanence l'intensité du rétroéclairage
     Retroeclairage();
+    Serial.println("bright : ");
+    Serial.print(bright);
   }
 
   // ===== VÉRIFICATION WIFI + MQTT TOUTES LES 30 SECONDES =====
@@ -439,8 +442,19 @@ void loop() {
       Serial.println("MQTT déconnecté, reconnexion...");
       lcd.setCursor(0, 1);
       lcd.print("MQTT OFF - Reconnex");
+      mqttWasDisconnected = true;
       reconnect_mqtt();
     }
+
+    // 3. Effacer le message si MQTT vient de se connecter
+  if (mqttWasDisconnected && client.connected()) {
+    lcd.setCursor(0, 1);
+    lcd.print("MQTT OK            ");  // Effacer le message
+    mqttWasDisconnected = false;
+    delay(1000);  // Afficher "MQTT OK" pendant 1 seconde
+    lcd.setCursor(0, 1);
+    lcd.print("                   ");  // Effacer complètement
+  }
   }
 
 // ===== MESURES PÉRIODIQUES (toutes les 5 minutes) =====
