@@ -1,3 +1,10 @@
+/*
+Reste à faire : modif affichage Température en gros, 
+
+
+
+*/
+
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
@@ -417,8 +424,8 @@ void loop() {
     }
     //ajuste en permanence l'intensité du rétroéclairage
     Retroeclairage();
-    Serial.println("bright : ");
-    Serial.print(bright);
+    Serial.print("bright : ");
+    Serial.println(bright);
   }
 
   // ===== VÉRIFICATION WIFI + MQTT TOUTES LES 30 SECONDES =====
