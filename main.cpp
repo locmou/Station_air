@@ -31,12 +31,12 @@ uint8_t bright;
 
 // ---------- CONFIG MQ-7 / ESP32 ----------
 #define MQ7_PIN 34              // Entrée analogique
-#define MESURE_INTERVAL 300000    // ms entre deux mesures + publication
+#define MESURE_INTERVAL 180000    // 3mn entre deux mesures + publication 
 #define RL_VALUE 10.0           // Résistance de charge en kOhms (10kΩ sur Flying Fish)
 #define RO_CLEAN_AIR_FACTOR 27.5 // Ratio RS/RO dans l'air pur pour MQ7
 #define ADC_RESOLUTION 4095.0   // Résolution ADC 12 bits ESP32
 float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, à calibrer)
-unsigned long lastMeasure = 0;
+unsigned long lastMeasure = -MESURE_INTERVAL;
 
 // Caractères personnalisés optimisés pour chiffres LCD
 byte LT[8] = {B00111, B01111, B11111, B11111, B11111, B11111, B11111, B11111};  // 0: Left Top
@@ -464,7 +464,7 @@ void loop() {
   }
   }
 
-// ===== MESURES PÉRIODIQUES (toutes les 5 minutes) =====
+// ===== MESURES PÉRIODIQUES (toutes les 3 minutes) =====
   if (now - lastMeasure > MESURE_INTERVAL) {
     lastMeasure = now;
     
@@ -480,15 +480,12 @@ void loop() {
 
     // Affichage série
     Serial.println("===== Mesures =====");
-    Serial.printf("T: %.1f°C | H: %.1f%% | P: %.0fhPa | CO: %.0fppm\n",
-                  tempAHT.temperature, humid.relative_humidity, press_hPa, ppm);
+    Serial.printf("T: %.1f°C | H: %.1f%% | P: %.0fhPa | CO: %.0fppm\n", tempAHT.temperature, humid.relative_humidity, press_hPa, ppm);
 
     // LCD ligne 0-1
     lcd.setCursor(0, 0); 
     lcd.printf("Tmp:%.1fC Hum:%.1f%%", tempAHT.temperature, humid.relative_humidity);
     lcd.setCursor(0, 1);
-    
-    
     // Afficher statut connexion
     if (WiFi.status() != WL_CONNECTED) {
       lcd.print("WiFi:OFF ");
