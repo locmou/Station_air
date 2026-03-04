@@ -31,12 +31,19 @@ uint8_t bright;
 
 // ---------- CONFIG MQ-7 / ESP32 ----------
 #define MQ7_PIN 34              // Entrée analogique
-#define MESURE_INTERVAL 180000    // 3mn entre deux mesures + publication 
+#define CYCLE_3mn 180000    // 3mn entre deux mesures + publication 
 #define RL_VALUE 10.0           // Résistance de charge en kOhms (10kΩ sur Flying Fish)
 #define RO_CLEAN_AIR_FACTOR 27.5 // Ratio RS/RO dans l'air pur pour MQ7
 #define ADC_RESOLUTION 4095.0   // Résolution ADC 12 bits ESP32
 float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, à calibrer)
-unsigned long lastMeasure = -MESURE_INTERVAL;
+unsigned long last_3m_time = -CYCLE_3mn;
+int rawValue;
+float rs;
+float ratio;
+float ppm;
+float press_hPa;
+float tempture;
+float Humite;
 
 // Caractères personnalisés optimisés pour chiffres LCD
 byte LT[8] = {B00111, B01111, B11111, B11111, B11111, B11111, B11111, B11111};  // 0: Left Top
@@ -50,12 +57,12 @@ byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}
 
 // ========== VARIABLES AFFICHAGE LCD ==========
 // Variables pour l'alternance d'affichage
-unsigned long lastDisplayChange = 0;
 const unsigned long DISPLAY_DURATION = 9000;  // 5 secondes
+unsigned long lastDisplayChange = -DISPLAY_DURATION;
 bool showBigPPM = true;  // true = afficher PPM, false = afficher détails
 // Variables pour le défilement des infos
-unsigned long lastInfoChange = 0;
 const unsigned long INFO_DURATION = 3000;  // 3sec par info
+unsigned long lastInfoChange = -INFO_DURATION;
 int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
 int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
 
@@ -69,9 +76,9 @@ const char* mqtt_user = "loic.mounier@laposte.net";
 const char* mqtt_pass = "vgo:?2258H";
 
 // ========== AJOUT : Variables pour gestion des reconnexions ==========
-unsigned long lastWifiCheck = 0;
-unsigned long lastClientLoop = 0; 
-const unsigned long WIFI_CHECK_INTERVAL = 30000;   // Vérifier WiFi toutes les 30s
+unsigned long last_1s_time = 0; 
+const unsigned long CYCLE_30s = 30000;   // Vérifier WiFi toutes les 30s
+unsigned long last_30s_time = -CYCLE_30s;
 int mqttReconnectAttempts = 0;
 const int MAX_MQTT_ATTEMPTS = 3;                   // Max 3 tentatives avant d'abandonner temporairement
 static bool mqttWasDisconnected = false;  
@@ -210,23 +217,37 @@ void printBigDigit(int digit, int col, int row) {
   }
 }
 
-// Affiche un nombre entier en gros au centre des lignes 2-3
-void printBigNumber(int number) {
-  lcd.setCursor(0, 2); lcd.print("                    "); // Effacer ligne 2
-  lcd.setCursor(0, 3); lcd.print("                    "); // Effacer ligne 3
+// Affiche un nombre entier en gros avec une décimale sur la ligne lign et colonne col
+void printBigNumber(float number, int col, int lign) {
+
+  int entier = (int)number;
+  int decimale = (int)((number - entier) * 10);
+
+  lcd.setCursor(0, lign); lcd.print("                    "); // Effacer ligne haute
+  lcd.setCursor(0, lign+1); lcd.print("                    "); // Effacer ligne basse
   
   // Convertir en string pour compter les chiffres
-  String numStr = String(number);
-  int numDigits = numStr.length();
-  
+  String entierStr = String(entier);
+  int numDigitsEntier = entierStr.length();
+
+  /*/
   // Calcul position de départ pour centrer (chaque chiffre = 3 colonnes + 1 espace)
   int startCol = (20 - (numDigits * 4 - 1)) / 2;
-  
+  */
+
   // Afficher chaque chiffre
-  for(int i = 0; i < numDigits; i++) {
-    int digit = numStr.charAt(i) - '0';  // Convertir char en int
-    printBigDigit(digit, startCol + (i * 4), 2);
+  for(int i = 0; i < entierStr.length(); i++) {
+    int digit = entierStr.charAt(i) - '0';  // Convertir char en int
+    printBigDigit(digit, col + (i * 4), lign);
   }
+
+  // Point décimal (caractère standard '.')
+  int pointCol = col + (numDigitsEntier * 4);
+  lcd.setCursor(pointCol, lign+1);
+  lcd.print(".");  // ← Point standard du LCD
+
+  // Partie décimale
+  printBigDigit(decimale, pointCol+1, lign);
 }
 
 void setup_wifi() {
@@ -258,7 +279,6 @@ void setup_wifi() {
     Serial.println("\nÉchec WiFi ! Réessai dans 30s...");
   }
 }
-
 
 void reconnect_mqtt() {
 
@@ -402,6 +422,19 @@ void setup() {
     Adafruit_BMP280::FILTER_X16,
     Adafruit_BMP280::STANDBY_MS_500
   );
+
+  // Première lecture sensor (puis toutes les 30s dans le loop)
+  sensors_event_t humid, tempAHT;
+  aht.getEvent(&humid, &tempAHT);
+  press_hPa = bmp.readPressure() / 100.0F;
+  tempture=tempAHT.temperature;
+  Humite=humid.relative_humidity;
+  
+  rawValue = analogRead(MQ7_PIN);
+  rs = readRS(rawValue);
+  ratio = rs / Ro;
+  ppm = calculatePPM(ratio);
+   
   
   Serial.println("Setup terminé !");
 } 
@@ -414,28 +447,69 @@ void setup() {
 /*********************************************LOOP ************************************************ */
 
 void loop() {
+
   unsigned long now = millis();
-  
+
+  /* toutes les secondes : client loop et actualisation du bright*/
+
   // ===== CLIENT.LOOP() TOUTES LES SECONDES et ajustement éclairage =====
-  if (now - lastClientLoop >= 1000) {
-    lastClientLoop = now;
+  if (now - last_1s_time >= 1000) {
+    last_1s_time = now;
     if (client.connected()) {
       client.loop();
     }
-    //ajuste en permanence l'intensité du rétroéclairage
+    //ajuste en permanence l'intensité du rétroéclairage et affiche les mesures sur le port série
     Retroeclairage();
-    Serial.print("bright : ");
-    Serial.println(bright);
+    Serial.println("===== Mesures =====");
+    Serial.printf("Bright: %i |T: %.1f°C | H: %.1f%% | P: %.0fhPa | CO: %.6fppm\n", bright, tempture, Humite, press_hPa, ppm);
   }
 
-  // ===== VÉRIFICATION WIFI + MQTT TOUTES LES 30 SECONDES =====
-  if (now - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
-    lastWifiCheck = now;
+
+  /*Toutes les 30' vérification mqtt */
+
+  // ===== VÉRIFICATION WIFI + MQTT + lecture  capteurs TOUTES LES 30 SECONDES =====
+  if (now - last_30s_time >= CYCLE_30s) {
+    last_30s_time = now;   
+
+    // Lecture capteurs
+    sensors_event_t humid, tempAHT;
+    aht.getEvent(&humid, &tempAHT);
+    press_hPa = bmp.readPressure() / 100.0F;
+    tempture=tempAHT.temperature;
+    Humite=humid.relative_humidity;
     
+    rawValue = analogRead(MQ7_PIN);
+    rs = readRS(rawValue);
+    ratio = rs / Ro;
+    ppm = calculatePPM(ratio);
+   
+    // Affichage série
+    Serial.println("===== Nouvelles mesures =====");
+
+  
+     // LCD ligne 0 - 1
+    printBigNumber(tempture,4,0);
+    lcd.setCursor(16, 1);
+    lcd.write(0xDF);
+    lcd.print("C");
+
+    // LCD ligne 2-3
+    lcd.setCursor(0, 2); 
+    lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
+    lcd.setCursor(0, 3);
+    // Afficher statut connexion
+    if (WiFi.status() != WL_CONNECTED) {
+      lcd.print("WiFi:OFF ");
+    } else if (!client.connected()) {
+      lcd.print("MQTT:OFF ");
+    } else {
+      lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
+    }
+
     // 1. Vérifier WiFi
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi perdu, reconnexion...");
-      lcd.setCursor(0, 1);
+      lcd.setCursor(0, 3);
       lcd.print("WiFi OFF - Reconnex");
       setup_wifi();
       
@@ -447,61 +521,34 @@ void loop() {
     // 2. Vérifier MQTT (seulement si WiFi OK)
     if (WiFi.status() == WL_CONNECTED && !client.connected()) {
       Serial.println("MQTT déconnecté, reconnexion...");
-      lcd.setCursor(0, 1);
+      lcd.setCursor(0, 3);
       lcd.print("MQTT OFF - Reconnex");
       mqttWasDisconnected = true;
       reconnect_mqtt();
     }
 
     // 3. Effacer le message si MQTT vient de se connecter
-  if (mqttWasDisconnected && client.connected()) {
-    lcd.setCursor(0, 1);
-    lcd.print("MQTT OK            ");  // Effacer le message
-    mqttWasDisconnected = false;
-    delay(1000);  // Afficher "MQTT OK" pendant 1 seconde
-    lcd.setCursor(0, 1);
-    lcd.print("                   ");  // Effacer complètement
-  }
-  }
-
-// ===== MESURES PÉRIODIQUES (toutes les 3 minutes) =====
-  if (now - lastMeasure > MESURE_INTERVAL) {
-    lastMeasure = now;
-    
-    // Lecture capteurs
-    sensors_event_t humid, tempAHT;
-    aht.getEvent(&humid, &tempAHT);
-    float press_hPa = bmp.readPressure() / 100.0F;
-    
-    int rawValue = analogRead(MQ7_PIN);
-    float rs = readRS(rawValue);
-    float ratio = rs / Ro;
-    float ppm = calculatePPM(ratio);
-
-    // Affichage série
-    Serial.println("===== Mesures =====");
-    Serial.printf("T: %.1f°C | H: %.1f%% | P: %.0fhPa | CO: %.0fppm\n", tempAHT.temperature, humid.relative_humidity, press_hPa, ppm);
-
-    // LCD ligne 0-1
-    lcd.setCursor(0, 0); 
-    lcd.printf("Tmp:%.1fC Hum:%.1f%%", tempAHT.temperature, humid.relative_humidity);
-    lcd.setCursor(0, 1);
-    // Afficher statut connexion
-    if (WiFi.status() != WL_CONNECTED) {
-      lcd.print("WiFi:OFF ");
-    } else if (!client.connected()) {
-      lcd.print("MQTT:OFF ");
-    } else {
-      lcd.printf("P:%.0f Lum:%-3d    ", press_hPa, bright);
+    if (mqttWasDisconnected && client.connected()) {
+      lcd.setCursor(0, 3);
+      lcd.print("MQTT OK            ");  // Effacer le message
+      mqttWasDisconnected = false;
+      delay(1000);  // Afficher "MQTT OK" pendant 1 seconde
+      lcd.setCursor(0, 3);
+      lcd.print("                   ");  // Effacer complètement
     }
+  }
+
+  // ===== Envoi périodique MQTT (toutes les 3 minutes) =====
+  if (now - last_3m_time > CYCLE_3mn) {
+    last_3m_time = now;
     
     // Publication MQTT seulement si connecté
     if (client.connected()) {
       client.publish("stationair/status", "online", true);
       
       JsonDocument doc;
-      doc["temperature"] = tempAHT.temperature;
-      doc["humidity"] = humid.relative_humidity;
+      doc["temperature"] = tempture;
+      doc["humidity"] = Humite;
       doc["pressure"] = press_hPa;
       doc["co"] = ppm;
 
@@ -515,57 +562,6 @@ void loop() {
       }
     } else {
       Serial.println("MQTT: Non connecté, données non publiées");
-    }
-  }
-
-  // ===== AFFICHAGE LCD LIGNES 2-3 (continue même sans WiFi/MQTT) =====
-  int rawValue = analogRead(MQ7_PIN);
-  float rs = readRS(rawValue);
-  float ratio = rs / Ro;
-  float ppm = calculatePPM(ratio);
-
-  // Alternance d'affichage
-  if (now - lastDisplayChange >= DISPLAY_DURATION) {
-    lastDisplayChange = now;
-    showBigPPM = !showBigPPM;
-    currentInfo = 0;
-    lastInfoChange = now;
-  }
-
-  if (showBigPPM) {
-    if (lastDisplayedInfo != -2) {
-      lcd.setCursor(0, 2); lcd.print("                    ");
-      lcd.setCursor(0, 3); lcd.print("                    ");
-      printBigNumber((int)ppm);
-      lcd.setCursor(0, 3); lcd.print("CO :");
-      lcd.setCursor(17, 3); lcd.print("ppm");
-      lastDisplayedInfo = -2;
-    }
-  } else {
-    if (now - lastInfoChange >= INFO_DURATION) {
-      lastInfoChange = now;
-      currentInfo = (currentInfo + 1) % 3;
-    }
-    
-    if (lastDisplayedInfo != currentInfo) {
-      lcd.setCursor(0, 2); lcd.print("                    ");
-      lcd.setCursor(0, 3); lcd.print("                    ");
-      
-      switch(currentInfo) {
-        case 0:
-          lcd.setCursor(0, 2); lcd.print("RS (Resistance):");
-          lcd.setCursor(0, 3); lcd.printf("%.2f kOhms", rs);
-          break;
-        case 1:
-          lcd.setCursor(0, 2); lcd.print("Ratio RS/Ro:");
-          lcd.setCursor(0, 3); lcd.printf("%.2f", ratio);
-          break;
-        case 2:
-          lcd.setCursor(0, 2); lcd.print("Valeur brute ADC:");
-          lcd.setCursor(0, 3); lcd.print(rawValue);
-          break;
-      }
-      lastDisplayedInfo = currentInfo;
     }
   }
 
