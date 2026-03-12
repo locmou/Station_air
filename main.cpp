@@ -55,11 +55,17 @@ byte LR[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11110, B11100};  
 byte MB[8] = {B11111, B11111, B11111, B00000, B00000, B00000, B11111, B11111};  // 6: Middle Bar
 byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}; // 7: Full Block
 
+// ===== SET METEO LCD HD44780 (5x8) =====
+byte sunLeft[8] = {B00100,B00000,B10000,B01000,B00100,B00010,B00001,B00000}; // 0 : Rayon soleil gauche
+byte sunTop[8] = {B00100,B00100,B00100,B00000,B00000,B00100,B00100,B00100};// 1 : Rayon soleil vertical
+byte sunRight[8] = {B00100,B00000,B00001,B00010,B00100,B01000,B10000,B00000};// 2 : Rayon soleil droit
+byte sunCore[8] = {B00000,B00110,B01111,B11111,B11111,B01111,B00110,B00000};// 3 : Centre soleil
+byte cloudLeft[8] = {B00000,B00000,B01100,B11110,B11111,B11111,B01111,B00000};// 4 : Nuage gauche
+byte cloudMid[8] = {B00000,B00000,B00110,B01111,B11111,B11111,B11111,B00000};// 5 : Nuage centre
+byte cloudRight[8] = {B00000,B00000,B00011,B00111,B11111,B11111,B11110,B00000};// 6 : Nuage droit
+byte rain[8] = {B00000,B00100,B00000,B01000,B00000,B00010,B00000,B00100};// 7 : Pluie
+
 // ========== VARIABLES AFFICHAGE LCD ==========
-// Variables pour l'alternance d'affichage
-const unsigned long DISPLAY_DURATION = 9000;  // 5 secondes
-unsigned long lastDisplayChange = -DISPLAY_DURATION;
-bool showBigPPM = true;  // true = afficher PPM, false = afficher détails
 // Variables pour le défilement des infos
 const unsigned long INFO_DURATION = 3000;  // 3sec par info
 unsigned long lastInfoChange = -INFO_DURATION;
@@ -170,7 +176,34 @@ float calculatePPM(float ratio) {
   return ppm;
 }
 
-
+void lcdslotmeteo(){
+lcd.createChar(0, sunLeft);
+lcd.createChar(1, sunTop);
+lcd.createChar(2, sunRight);
+lcd.createChar(3, sunCore);
+lcd.createChar(4, cloudLeft);
+lcd.createChar(5, cloudMid);
+lcd.createChar(6, cloudRight);
+lcd.createChar(7, rain);
+}
+void lcdslotbigdigit(){
+lcd.createChar(0, LT);
+lcd.createChar(1, UB);
+lcd.createChar(2, RT);
+lcd.createChar(3, LL);
+lcd.createChar(4, LB);
+lcd.createChar(5, LR);
+lcd.createChar(6, MB);
+lcd.createChar(7, block);
+}
+void lcdslotdangerCO(){
+  /*
+  
+  blablabla
+  
+  
+  */
+}
 // Affiche un chiffre en gros (3 colonnes × 2 lignes)
 void printBigDigit(int digit, int col, int row) {
   switch(digit) {
@@ -213,6 +246,27 @@ void printBigDigit(int digit, int col, int row) {
     case 9:
       lcd.setCursor(col, row);     lcd.write(0); lcd.write(6); lcd.write(2);
       lcd.setCursor(col, row + 1); lcd.write(4); lcd.write(4); lcd.write(5);
+      break;
+  }
+}
+// Affiche un chiffre en gros (3 colonnes × 2 lignes)
+void printMeteo(int digit, int col, int row) {
+  switch(digit) {
+    case 0:// Soleil
+      lcd.setCursor(col,row);lcd.write(0); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col,row+1);lcd.write(3); lcd.write(3); lcd.write(3);
+      break;
+    case 1://Nuage
+      lcd.setCursor(col, row);     lcd.write(4); lcd.write(5); lcd.write(6);
+      lcd.setCursor(col, row + 1); lcd.write(5); lcd.write(5); lcd.write(5);
+      break;
+    case 2://Pluie
+      lcd.setCursor(col, row);     lcd.write(4); lcd.write(5); lcd.write(6);
+      lcd.setCursor(col, row + 1); lcd.write(7); lcd.write(7); lcd.write(7);
+      break;
+    case 3://Soleil + nuage
+      lcd.setCursor(col, row);     lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(6);
+      lcd.setCursor(col, row + 1); lcd.write(3); lcd.write(4); lcd.write(5); lcd.write(5);
       break;
   }
 }
@@ -388,14 +442,7 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.clear();
-  lcd.createChar(0, LT);
-  lcd.createChar(1, UB);
-  lcd.createChar(2, RT);
-  lcd.createChar(3, LL);
-  lcd.createChar(4, LB);
-  lcd.createChar(5, LR);
-  lcd.createChar(6, MB);
-  lcd.createChar(7, block);
+  lcdslotbigdigit();
 
   // I2C
   Wire.begin(21, 22);
