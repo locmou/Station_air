@@ -56,6 +56,7 @@ byte MB[8] = {B11111, B11111, B11111, B00000, B00000, B00000, B11111, B11111};  
 byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}; // 7: Full Block
 
 // ===== SET METEO LCD HD44780 (5x8) =====
+/*
 byte sunLeft[8] = {B00100,B00000,B10000,B01000,B00100,B00010,B00001,B00000}; // 0 : Rayon soleil gauche
 byte sunTop[8] = {B00100,B00100,B00100,B00000,B00000,B00100,B00100,B00100};// 1 : Rayon soleil vertical
 byte sunRight[8] = {B00100,B00000,B00001,B00010,B00100,B01000,B10000,B00000};// 2 : Rayon soleil droit
@@ -64,6 +65,107 @@ byte cloudLeft[8] = {B00000,B00000,B01100,B11110,B11111,B11111,B01111,B00000};//
 byte cloudMid[8] = {B00000,B00000,B00110,B01111,B11111,B11111,B11111,B00000};// 5 : Nuage centre
 byte cloudRight[8] = {B00000,B00000,B00011,B00111,B11111,B11111,B11110,B00000};// 6 : Nuage droit
 byte rain[8] = {B00000,B00100,B00000,B01000,B00000,B00010,B00000,B00100};// 7 : Pluie
+    1    2    3    4
+01234 56789 01234 56789
++-----+-----+-----+-----+
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
++-----+-----+-----+-----+
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
++-----+-----+-----+-----+
+*/
+// Soleil (3 caractères)
+byte sunLeft[8] = {
+  B10001,   // *   *
+  B01000,   //  *
+  B00100,   //   *
+  B00010,   //    *
+  B10011,   // *  **
+  B01011,   //  * **
+  B00111,   //   ***
+  B00111    //   ***
+};
+
+byte sunCenter[8] = {
+  B00100,   //   *
+  B00100,   //   *
+  B00000,   //
+  B00000,   //
+  B11100,   // ***
+  B11110,   // ****
+  B11110,   // ****
+  B11110    // ****
+};
+
+byte sunRight[8] = {
+  B10001,   // *   *
+  B00010,   //    *
+  B00100,   //   *
+  B01000,   //  *
+  B11001,   // **  *
+  B11010,   // ** *
+  B11100,   // ***
+  B11100    // ***
+};
+
+// Nuage (3 caractères)
+byte cloudLeft[8] = {
+  B00000,
+  B00000,
+  B00111,   //   ***
+  B01111,   //  ****
+  B11111,   // *****
+  B11111,   // *****
+  B01111,   //  ****
+  B00000
+};
+
+byte cloudCenter[8] = {
+  B00000,
+  B00011,   //   **
+  B01111,   //  ****
+  B11111,   // *****
+  B11111,   // *****
+  B11111,   // *****
+  B11111,   // *****
+  B00000
+};
+
+byte cloudRight[8] = {
+  B00000,
+  B11000,   // **
+  B11110,   // ****
+  B11111,   // *****
+  B11111,   // *****
+  B11111,   // *****
+  B11110,   // ****
+  B00000
+};
+
+// Pluie (caractère unique pour gouttes)
+byte rain[8] = {
+  B00000,
+  B00100,   //   *
+  B00100,   //   *
+  B01000,   //  *
+  B01000,   //  *
+  B10000,   // *
+  B10000,   // *
+  B00000
+};
 
 // ========== VARIABLES AFFICHAGE LCD ==========
 // Variables pour le défilement des infos
@@ -195,7 +297,17 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 }
-
+void lcdslotmeteo() {
+  lcd.createChar(0, sunLeft);
+  lcd.createChar(1, sunCenter);
+  lcd.createChar(2, sunRight);
+  lcd.createChar(3, cloudLeft);
+  lcd.createChar(4, cloudCenter);
+  lcd.createChar(5, cloudRight);
+  lcd.createChar(6, rain);
+  // Slot 7 disponible
+}
+/*
 void lcdslotmeteo(){
 lcd.createChar(0, sunLeft);
 lcd.createChar(1, sunTop);
@@ -206,7 +318,7 @@ lcd.createChar(5, cloudMid);
 lcd.createChar(6, cloudRight);
 lcd.createChar(7, rain);
 }
-
+*/
 void lcdslotdangerCO(){
   /*
   
@@ -261,6 +373,47 @@ void printBigDigit(int digit, int col, int row) {
       break;
   }
 }
+
+// ========== FONCTION D'AFFICHAGE MÉTÉO ==========
+
+void printMeteo(int type, int col, int row) {
+  // Effacer la zone d'affichage (6 colonnes × 2 lignes)
+  lcd.setCursor(col, row);
+  lcd.print("      ");  // 6 espaces
+  lcd.setCursor(col, row + 1);
+  lcd.print("      ");
+  
+  switch(type) {
+    case 0:  // ☀ SOLEIL
+      lcd.setCursor(col, row);
+      lcd.write(0); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row + 1);
+      lcd.write(0); lcd.write(1); lcd.write(2);
+      break;
+      
+    case 1:  // ☁ NUAGEUX
+      lcd.setCursor(col, row);
+      lcd.print("   ");  // Ligne vide au-dessus
+      lcd.setCursor(col, row + 1);
+      lcd.write(3); lcd.write(4); lcd.write(5);
+      break;
+      
+    case 2:  // 🌧 PLUIE
+      lcd.setCursor(col, row);
+      lcd.write(3); lcd.write(4); lcd.write(5);
+      lcd.setCursor(col, row + 1);
+      lcd.write(6); lcd.write(6); lcd.write(6);
+      break;
+      
+    case 3:  // ⛅ SOLEIL + NUAGE
+      lcd.setCursor(col, row);
+      lcd.write(0); lcd.write(1); lcd.write(2);
+      lcd.setCursor(col, row + 1);
+      lcd.write(3); lcd.write(4); lcd.write(5);
+      break;
+  }
+}
+/*
 // Affiche un chiffre en gros (3 colonnes × 2 lignes)
 void printMeteo(int digit, int col, int row) {
   switch(digit) {
@@ -282,6 +435,7 @@ void printMeteo(int digit, int col, int row) {
       break;
   }
 }
+  */
 
 // Affiche un nombre entier en gros avec une décimale sur la ligne lign et colonne col
 void printBigNumber(float number, int col, int lign) {
@@ -568,7 +722,7 @@ void loop() {
       }
     } else if (aff==MODE_P){
       lcdslotmeteo();
-      printMeteo(3, 3, 0);
+      printMeteo(0, 3, 0);
     }
 
     
