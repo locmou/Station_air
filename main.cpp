@@ -142,6 +142,15 @@ char mqttBuffer[600];  // Buffer global
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+// Déclaration des constantes pour les modes
+enum modeaff 
+{
+  MODE_T,
+  MODE_P,
+  MODE_CO,
+};
+
+modeaff aff;
 
 
 
@@ -176,16 +185,6 @@ float calculatePPM(float ratio) {
   return ppm;
 }
 
-void lcdslotmeteo(){
-lcd.createChar(0, sunLeft);
-lcd.createChar(1, sunTop);
-lcd.createChar(2, sunRight);
-lcd.createChar(3, sunCore);
-lcd.createChar(4, cloudLeft);
-lcd.createChar(5, cloudMid);
-lcd.createChar(6, cloudRight);
-lcd.createChar(7, rain);
-}
 void lcdslotbigdigit(){
 lcd.createChar(0, LT);
 lcd.createChar(1, UB);
@@ -196,6 +195,18 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 }
+
+void lcdslotmeteo(){
+lcd.createChar(0, sunLeft);
+lcd.createChar(1, sunTop);
+lcd.createChar(2, sunRight);
+lcd.createChar(3, sunCore);
+lcd.createChar(4, cloudLeft);
+lcd.createChar(5, cloudMid);
+lcd.createChar(6, cloudRight);
+lcd.createChar(7, rain);
+}
+
 void lcdslotdangerCO(){
   /*
   
@@ -204,6 +215,7 @@ void lcdslotdangerCO(){
   
   */
 }
+
 // Affiche un chiffre en gros (3 colonnes × 2 lignes)
 void printBigDigit(int digit, int col, int row) {
   switch(digit) {
@@ -442,7 +454,8 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.clear();
-  lcdslotbigdigit();
+  aff=MODE_P;
+  lcdslotmeteo();
 
   // I2C
   Wire.begin(21, 22);
@@ -512,7 +525,7 @@ void loop() {
   }
 
 
-  /*Toutes les 30' vérification mqtt */
+  /*Toutes les 30' vérification mqtt et affichage lcd*/
 
   // ===== VÉRIFICATION WIFI + MQTT + lecture  capteurs TOUTES LES 30 SECONDES =====
   if (now - last_30s_time >= CYCLE_30s) {
@@ -533,26 +546,32 @@ void loop() {
     // Affichage série
     Serial.println("===== Nouvelles mesures =====");
 
-  
-     // LCD ligne 0 - 1
-    printBigNumber(tempture,4,0);
-    lcd.setCursor(16, 1);
-    lcd.write(0xDF);
-    lcd.print("C");
+    if (aff==MODE_T){
+      lcdslotbigdigit();
+      // LCD ligne 0 - 1
+      printBigNumber(tempture,4,0);
+      lcd.setCursor(16, 1);
+      lcd.write(0xDF);
+      lcd.print("C");
 
-    // LCD ligne 2-3
-    lcd.setCursor(0, 2); 
-    lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
-    lcd.setCursor(0, 3);
-    // Afficher statut connexion
-    if (WiFi.status() != WL_CONNECTED) {
-      lcd.print("WiFi:OFF ");
-    } else if (!client.connected()) {
-      lcd.print("MQTT:OFF ");
-    } else {
-      lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
+      // LCD ligne 2-3
+      lcd.setCursor(0, 2); 
+      lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
+      lcd.setCursor(0, 3);
+      // Afficher statut connexion
+      if (WiFi.status() != WL_CONNECTED) {
+        lcd.print("WiFi:OFF ");
+      } else if (!client.connected()) {
+        lcd.print("MQTT:OFF ");
+      } else {
+        lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
+      }
+    } else if (aff==MODE_P){
+      lcdslotmeteo();
+      printMeteo(3, 3, 0);
     }
 
+    
     // 1. Vérifier WiFi
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi perdu, reconnexion...");
