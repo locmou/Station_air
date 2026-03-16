@@ -57,14 +57,65 @@ byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}
 
 // ===== SET METEO LCD HD44780 (5x8) =====
 /*
-byte sunLeft[8] = {B00100,B00000,B10000,B01000,B00100,B00010,B00001,B00000}; // 0 : Rayon soleil gauche
-byte sunTop[8] = {B00100,B00100,B00100,B00000,B00000,B00100,B00100,B00100};// 1 : Rayon soleil vertical
-byte sunRight[8] = {B00100,B00000,B00001,B00010,B00100,B01000,B10000,B00000};// 2 : Rayon soleil droit
-byte sunCore[8] = {B00000,B00110,B01111,B11111,B11111,B01111,B00110,B00000};// 3 : Centre soleil
-byte cloudLeft[8] = {B00000,B00000,B01100,B11110,B11111,B11111,B01111,B00000};// 4 : Nuage gauche
-byte cloudMid[8] = {B00000,B00000,B00110,B01111,B11111,B11111,B11111,B00000};// 5 : Nuage centre
-byte cloudRight[8] = {B00000,B00000,B00011,B00111,B11111,B11111,B11110,B00000};// 6 : Nuage droit
-byte rain[8] = {B00000,B00100,B00000,B01000,B00000,B00010,B00000,B00100};// 7 : Pluie
+=> Soleil
+    1    2    3    4
+01234 56789 01234 56789
++-----+-----+-----+-----+
+|1...1|....1|.....|1...1|
+|.1...|.....|.....|...1.|
+|.....|1.111|111.1|.....|
+|.....|.1111|1111.|.....|
+|.....|11111|11111|.....|
+|.....|11111|11111|.....|
+|.....|11111|11111|.....|
+|1111.|11111|11111|.1111|
++-----+-----+-----+-----+
+|.....|11111|11111|.....|
+|.....|11111|11111|.....|
+|.....|.1111|1111.|.....|
+|.1...|1.111|111.1|...1.|
+|1....|.....|.....|....1|
+|....1|....1|.....|1....|
+|...1.|....1|.....|.1...|
+|..1..|....1|.....|..1..|
++-----+-----+-----+-----+
+
+*/
+
+byte soleil[8][8] = {
+  {0x11, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1E}, // Caractère 0
+  {0x01, 0x00, 0x17, 0x0F, 0x1F, 0x1F, 0x1F, 0x1F}, // Caractère 1
+  {0x00, 0x00, 0x1D, 0x1E, 0x1F, 0x1F, 0x1F, 0x1F}, // Caractère 2
+  {0x11, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F}, // Caractère 3
+  {0x00, 0x00, 0x00, 0x08, 0x10, 0x01, 0x02, 0x04}, // Caractère 4
+  {0x1F, 0x1F, 0x0F, 0x17, 0x00, 0x01, 0x01, 0x01}, // Caractère 5
+  {0x1F, 0x1F, 0x1E, 0x1D, 0x00, 0x01, 0x00, 0x01}, // Caractère 6
+  {0x00, 0x00, 0x00, 0x02, 0x01, 0x10, 0x08, 0x04}  // Caractère 7
+};
+
+/*
+    1    2    3    4
+01234 56789 01234 56789
++-----+-----+-----+-----+
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
++-----+-----+-----+-----+
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
++-----+-----+-----+-----+
+
     1    2    3    4
 01234 56789 01234 56789
 +-----+-----+-----+-----+
@@ -87,86 +138,6 @@ byte rain[8] = {B00000,B00100,B00000,B01000,B00000,B00010,B00000,B00100};// 7 : 
 |.....|.....|.....|.....|
 +-----+-----+-----+-----+
 */
-// Soleil (3 caractères)
-byte sunLeft[8] = {
-  B10001,   // *   *
-  B01000,   //  *
-  B00100,   //   *
-  B00010,   //    *
-  B10011,   // *  **
-  B01011,   //  * **
-  B00111,   //   ***
-  B00111    //   ***
-};
-
-byte sunCenter[8] = {
-  B00100,   //   *
-  B00100,   //   *
-  B00000,   //
-  B00000,   //
-  B11100,   // ***
-  B11110,   // ****
-  B11110,   // ****
-  B11110    // ****
-};
-
-byte sunRight[8] = {
-  B10001,   // *   *
-  B00010,   //    *
-  B00100,   //   *
-  B01000,   //  *
-  B11001,   // **  *
-  B11010,   // ** *
-  B11100,   // ***
-  B11100    // ***
-};
-
-// Nuage (3 caractères)
-byte cloudLeft[8] = {
-  B00000,
-  B00000,
-  B00111,   //   ***
-  B01111,   //  ****
-  B11111,   // *****
-  B11111,   // *****
-  B01111,   //  ****
-  B00000
-};
-
-byte cloudCenter[8] = {
-  B00000,
-  B00011,   //   **
-  B01111,   //  ****
-  B11111,   // *****
-  B11111,   // *****
-  B11111,   // *****
-  B11111,   // *****
-  B00000
-};
-
-byte cloudRight[8] = {
-  B00000,
-  B11000,   // **
-  B11110,   // ****
-  B11111,   // *****
-  B11111,   // *****
-  B11111,   // *****
-  B11110,   // ****
-  B00000
-};
-
-// Pluie (caractère unique pour gouttes)
-byte rain[8] = {
-  B00000,
-  B00100,   //   *
-  B00100,   //   *
-  B01000,   //  *
-  B01000,   //  *
-  B10000,   // *
-  B10000,   // *
-  B00000
-};
-
 // ========== VARIABLES AFFICHAGE LCD ==========
 // Variables pour le défilement des infos
 const unsigned long INFO_DURATION = 3000;  // 3sec par info
@@ -298,27 +269,13 @@ lcd.createChar(6, MB);
 lcd.createChar(7, block);
 }
 void lcdslotmeteo() {
-  lcd.createChar(0, sunLeft);
-  lcd.createChar(1, sunCenter);
-  lcd.createChar(2, sunRight);
-  lcd.createChar(3, cloudLeft);
-  lcd.createChar(4, cloudCenter);
-  lcd.createChar(5, cloudRight);
-  lcd.createChar(6, rain);
-  // Slot 7 disponible
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, soleil[i]);
+  }
 }
-/*
-void lcdslotmeteo(){
-lcd.createChar(0, sunLeft);
-lcd.createChar(1, sunTop);
-lcd.createChar(2, sunRight);
-lcd.createChar(3, sunCore);
-lcd.createChar(4, cloudLeft);
-lcd.createChar(5, cloudMid);
-lcd.createChar(6, cloudRight);
-lcd.createChar(7, rain);
-}
-*/
+
+
 void lcdslotdangerCO(){
   /*
   
@@ -384,11 +341,11 @@ void printMeteo(int type, int col, int row) {
   lcd.print("      ");
   
   switch(type) {
-    case 0:  // ☀ SOLEIL
-      lcd.setCursor(col, row);
-      lcd.write(0); lcd.write(1); lcd.write(2);
-      lcd.setCursor(col, row + 1);
-      lcd.write(0); lcd.write(1); lcd.write(2);
+      case 0:  // ☀ SOLEIL
+        lcd.setCursor(col, row);
+        lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(3);
+        lcd.setCursor(col, 1 + row);
+        lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
       break;
       
     case 1:  // ☁ NUAGEUX
