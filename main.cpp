@@ -738,8 +738,8 @@ void loop() {
       }
     } else if (aff==MODE_P){
       if (press_hPa>1015){
-      lcdslotsoleil();
-      printMeteo(0, 3, 0);
+        lcdslotsoleil();
+        printMeteo(0, 3, 0);
       } else if (press_hPa>1000){
         lcdslotnuagesoleil();
         printMeteo(0, 3, 0);
