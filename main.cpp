@@ -82,7 +82,7 @@ byte block[8] = {B11111, B11111, B11111, B11111, B11111, B11111, B11111, B11111}
 
 */
 
-byte soleilPartiel[8][8] = {
+byte soleil[8][8] = {
   {0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F}, // 0: Plein gauche
   {0x1F, 0x1F, 0x1F, 0x1E, 0x1C, 0x1C, 0x1C, 0x14}, // 1: Dégradé haut
   {0x10, 0x00, 0x10, 0x0E, 0x01, 0x00, 0x00, 0x00}, // 2: Bordure milieu
@@ -308,29 +308,42 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 }
-void lcdslotmeteo() {
-  
+void lcdslotsoleil() { 
   // Charger les 8 caractères personnalisés
   for (int i = 0; i < 8; i++) {
     lcd.createChar(i, soleil[i]);
-  }
-  /*
-    // Charger les 8 caractères
+  }  
+}
+
+void lcdslotnuagesoleil() {
+  // Charger les 8 caractères personnalisés
   for (int i = 0; i < 8; i++) {
     lcd.createChar(i, nuageSoleil[i]);
-  }
-    */
+  }  
 }
-
-
+/*
+void lcdslotnuage() {
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuageSoleil[i]);
+  }  
+}
+void lcdslotpluie() {
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuageSoleil[i]);
+  }  
+}
 void lcdslotdangerCO(){
-  /*
-  
-  blablabla
-  
-  
-  */
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuageSoleil[i]);
+  }  
 }
+  
+  
+  
+}*/
 
 // Affiche un chiffre en gros (3 colonnes × 2 lignes)
 void printBigDigit(int digit, int col, int row) {
@@ -613,7 +626,6 @@ void setup() {
   lcd.backlight();
   lcd.clear();
   aff=MODE_P;
-  lcdslotmeteo();
 
   // I2C
   Wire.begin(21, 22);
@@ -725,8 +737,13 @@ void loop() {
         lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
       }
     } else if (aff==MODE_P){
-      lcdslotmeteo();
+      if (press_hPa>1015){
+      lcdslotsoleil();
       printMeteo(0, 3, 0);
+      } else if (press_hPa>1000){
+        lcdslotnuagesoleil();
+        printMeteo(0, 3, 0);
+      }
     }
 
     
