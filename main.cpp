@@ -424,14 +424,18 @@ void printBigDigit(int digit, int col, int row) {
   }
 }
 
+void clean2prems(int lign){
+  lcd.setCursor(0, lign); lcd.print("                    "); // Effacer ligne haute
+  lcd.setCursor(0, lign+1); lcd.print("                    "); // Effacer ligne basse
+}
+
+
 // Affiche un nombre entier en gros avec une décimale sur la ligne lign et colonne col
 void printBigNumber(float number, int col, int lign) {
 
   int entier = (int)number;
   int decimale = (int)((number - entier) * 10);
-
-  lcd.setCursor(0, lign); lcd.print("                    "); // Effacer ligne haute
-  lcd.setCursor(0, lign+1); lcd.print("                    "); // Effacer ligne basse
+  clean2prems(lign);
   
   // Convertir en string pour compter les chiffres
   String entierStr = String(entier);
@@ -480,29 +484,21 @@ void lcdslotpluie() {
   }  
 }
 
-
 // ========== FONCTION D'AFFICHAGE MÉTÉO ==========
 
 void printMeteo(int type, int col, int row) {
-  // Effacer la zone d'affichage (6 colonnes × 2 lignes)
-  lcd.setCursor(col, row);
-  lcd.print("      ");  // 6 espaces
-  lcd.setCursor(col, row + 1);
-  lcd.print("      ");
-  
+
+  clean2prems(row);
   switch(type) {
     case 0:  // ☀ SOLEIL
       lcdslotsoleil();
-    break;
-    
+    break;  
     case 1:  // ⛅ SOLEIL + NUAGE 
       lcdslotnuagesoleil();
     break;
-
     case 2: // ☁ NUAGEUX
       lcdslotnuage(); 
     break;
-
     case 3:  // 🌧 PLUIE
       lcdslotpluie(); 
     break;
@@ -514,7 +510,6 @@ void printMeteo(int type, int col, int row) {
   lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
 }
 
-
 // Alerte excès de CO
 void printco(int col, int row) {
 for (int i = 0; i < 8; i++) {
@@ -524,8 +519,6 @@ for (int i = 0; i < 8; i++) {
   lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(3);
   lcd.setCursor(col, row + 1);
   lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
-
-
 }
 
 
