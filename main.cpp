@@ -516,7 +516,7 @@ void printMeteo(int type, int col, int row) {
 
 
 // Alerte excès de CO
-void printCO(col,row){
+void printco(int col, int row) {
 for (int i = 0; i < 8; i++) {
     lcd.createChar(i, tropco[i]);
   }
@@ -745,35 +745,27 @@ void loop() {
 
 // Provisoire pour essayer tous les affichages
     rotation=rotation+1;
-    if (rotation==6) {rotation=0};
+    if (rotation==6) {rotation=0;};
     switch(rotation) {
       case 0: 
         aff=MODE_T;
       break;
-      
       case 1: 
-        aff=MODE_P
+        aff=MODE_P;
       break;
-
       case 2: 
-        aff=MODE_P
+        aff=MODE_P;
       break;
-
       case 3:  
-        aff=MODE_P
+        aff=MODE_P;
       break;
-
       case 4: 
-        aff=MODE_P
-      break;
-      
+        aff=MODE_P;
+      break;      
       case 5: 
-        aff=MODE_CO
+        aff=MODE_CO;
       break;
-
     }
-
-
 
     // Lecture capteurs
     sensors_event_t humid, tempAHT;
@@ -812,7 +804,7 @@ void loop() {
       }
     } else if (aff==MODE_P){
                                                               // Provisoire pour test
-                                                                    if (rotation===1){       
+                                                                    if (rotation==1){       
                                                                       printMeteo(0, 2, 0);
                                                                     } else if (rotation==2){        
                                                                       printMeteo(1, 2, 0);
@@ -835,7 +827,7 @@ void loop() {
       }
         */
     } else {
-      printCO(2,0);
+      printco(2,0);
     }
 
     
