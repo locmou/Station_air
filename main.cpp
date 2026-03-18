@@ -318,43 +318,6 @@ lcd.createChar(5, LR);
 lcd.createChar(6, MB);
 lcd.createChar(7, block);
 }
-void lcdslotsoleil() { 
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, soleil[i]);
-  }  
-}
-
-void lcdslotnuagesoleil() {
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuageSoleil[i]);
-  }  
-}
-
-void lcdslotnuage() {
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuage[i]);
-  }  
-}
-/*
-void lcdslotpluie() {
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuageSoleil[i]);
-  }  
-}
-void lcdslotdangerCO(){
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuageSoleil[i]);
-  }  
-}
-  
-  
-  
-}*/
 
 // Affiche un chiffre en gros (3 colonnes × 2 lignes)
 void printBigDigit(int digit, int col, int row) {
@@ -402,6 +365,42 @@ void printBigDigit(int digit, int col, int row) {
   }
 }
 
+void lcdslotsoleil() { 
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, soleil[i]);
+  }  
+}
+
+void lcdslotnuagesoleil() {
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuageSoleil[i]);
+  }  
+}
+
+void lcdslotnuage() {
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuage[i]);
+  }  
+}
+/*
+void lcdslotpluie() {
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuageSoleil[i]);
+  }  
+}
+void lcdslotdangerCO(){
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, nuageSoleil[i]);
+  }  
+}
+  
+*/
+
 // ========== FONCTION D'AFFICHAGE MÉTÉO ==========
 
 void printMeteo(int type, int col, int row) {
@@ -417,23 +416,22 @@ void printMeteo(int type, int col, int row) {
          lcdslotsoleil();
       break;
       
-    case 1:  // ⛅ SOLEIL + NUAGE 
+      case 1:  // ⛅ SOLEIL + NUAGE 
         lcdslotnuagesoleil();
       break;
-      
-    case 2:  // 🌧 PLUIE
+
+      case 2: // ☁ NUAGEUX
+        lcdslotnuage(); 
+      break;
+
+    case 3:  // 🌧 PLUIE
       lcd.setCursor(col, row);
       lcd.write(3); lcd.write(4); lcd.write(5);
       lcd.setCursor(col, row + 1);
       lcd.write(6); lcd.write(6); lcd.write(6);
       break;
       
-    case 3: // ☁ NUAGEUX
-      lcd.setCursor(col, row);
-      lcd.write(0); lcd.write(1); lcd.write(2);
-      lcd.setCursor(col, row + 1);
-      lcd.write(3); lcd.write(4); lcd.write(5);
-      break;
+
   }
 
 
@@ -728,12 +726,14 @@ void loop() {
         lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
       }
     } else if (aff==MODE_P){
-      if (press_hPa>1015){
-        
-        printMeteo(0, 3, 0);
-      } else if (press_hPa>1000){
-        
-        printMeteo(1, 3, 0);
+      if (press_hPa>1015){       
+        printMeteo(0, 2, 0);
+      } else if (press_hPa>1002){        
+        printMeteo(1, 2, 0);
+      } else if (press_hPa>990){
+        printMeteo(2, 2, 0);
+      } else {
+        printMeteo(3, 2, 0);
       }
     }
 
