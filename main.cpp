@@ -321,13 +321,14 @@ void lcdslotnuagesoleil() {
     lcd.createChar(i, nuageSoleil[i]);
   }  
 }
-/*
+
 void lcdslotnuage() {
   // Charger les 8 caractères personnalisés
   for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuageSoleil[i]);
+    lcd.createChar(i, nuage[i]);
   }  
 }
+/*
 void lcdslotpluie() {
   // Charger les 8 caractères personnalisés
   for (int i = 0; i < 8; i++) {
@@ -400,19 +401,14 @@ void printMeteo(int type, int col, int row) {
   lcd.setCursor(col, row + 1);
   lcd.print("      ");
   
+
   switch(type) {
       case 0:  // ☀ SOLEIL
-        lcd.setCursor(col, row);
-        lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(3);
-        lcd.setCursor(col, 1 + row);
-        lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
+         lcdslotsoleil();
       break;
       
-    case 1:  // ☁ NUAGEUX
-      lcd.setCursor(col, row);
-      lcd.print("   ");  // Ligne vide au-dessus
-      lcd.setCursor(col, row + 1);
-      lcd.write(3); lcd.write(4); lcd.write(5);
+    case 1:  // ⛅ SOLEIL + NUAGE 
+        lcdslotnuagesoleil();
       break;
       
     case 2:  // 🌧 PLUIE
@@ -422,37 +418,22 @@ void printMeteo(int type, int col, int row) {
       lcd.write(6); lcd.write(6); lcd.write(6);
       break;
       
-    case 3:  // ⛅ SOLEIL + NUAGE
+    case 3: // ☁ NUAGEUX
       lcd.setCursor(col, row);
       lcd.write(0); lcd.write(1); lcd.write(2);
       lcd.setCursor(col, row + 1);
       lcd.write(3); lcd.write(4); lcd.write(5);
       break;
   }
+
+
+
+
+  lcd.setCursor(col, row);
+  lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(3);
+  lcd.setCursor(col, 1 + row);
+  lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
 }
-/*
-// Affiche un chiffre en gros (3 colonnes × 2 lignes)
-void printMeteo(int digit, int col, int row) {
-  switch(digit) {
-    case 0:// Soleil
-      lcd.setCursor(col,row);lcd.write(0); lcd.write(1); lcd.write(2);
-      lcd.setCursor(col,row+1);lcd.write(3); lcd.write(3); lcd.write(3);
-      break;
-    case 1://Nuage
-      lcd.setCursor(col, row);     lcd.write(4); lcd.write(5); lcd.write(6);
-      lcd.setCursor(col, row + 1); lcd.write(5); lcd.write(5); lcd.write(5);
-      break;
-    case 2://Pluie
-      lcd.setCursor(col, row);     lcd.write(4); lcd.write(5); lcd.write(6);
-      lcd.setCursor(col, row + 1); lcd.write(7); lcd.write(7); lcd.write(7);
-      break;
-    case 3://Soleil + nuage
-      lcd.setCursor(col, row);     lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(6);
-      lcd.setCursor(col, row + 1); lcd.write(3); lcd.write(4); lcd.write(5); lcd.write(5);
-      break;
-  }
-}
-  */
 
 // Affiche un nombre entier en gros avec une décimale sur la ligne lign et colonne col
 void printBigNumber(float number, int col, int lign) {
@@ -738,11 +719,11 @@ void loop() {
       }
     } else if (aff==MODE_P){
       if (press_hPa>1015){
-        lcdslotsoleil();
+        
         printMeteo(0, 3, 0);
       } else if (press_hPa>1000){
-        lcdslotnuagesoleil();
-        printMeteo(0, 3, 0);
+        
+        printMeteo(1, 3, 0);
       }
     }
 
