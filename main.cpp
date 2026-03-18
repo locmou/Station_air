@@ -410,32 +410,23 @@ void printMeteo(int type, int col, int row) {
   lcd.setCursor(col, row + 1);
   lcd.print("      ");
   
-
   switch(type) {
-      case 0:  // ☀ SOLEIL
-         lcdslotsoleil();
-      break;
-      
-      case 1:  // ⛅ SOLEIL + NUAGE 
-        lcdslotnuagesoleil();
-      break;
+    case 0:  // ☀ SOLEIL
+      lcdslotsoleil();
+    break;
+    
+    case 1:  // ⛅ SOLEIL + NUAGE 
+      lcdslotnuagesoleil();
+    break;
 
-      case 2: // ☁ NUAGEUX
-        lcdslotnuage(); 
-      break;
+    case 2: // ☁ NUAGEUX
+      lcdslotnuage(); 
+    break;
 
     case 3:  // 🌧 PLUIE
-      lcd.setCursor(col, row);
-      lcd.write(3); lcd.write(4); lcd.write(5);
-      lcd.setCursor(col, row + 1);
-      lcd.write(6); lcd.write(6); lcd.write(6);
-      break;
-      
-
+      lcdslotpluie(); 
+    break;
   }
-
-
-
 
   lcd.setCursor(col, row);
   lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(3);
