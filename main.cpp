@@ -170,24 +170,73 @@ byte nuage[8][8] = {
 01234 56789 01234 56789
 +-----+-----+-----+-----+
 |.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
+|.....|.....|.....|111..|
+|...11|11...|...11|1.11.|
+|..111|111..|.1111|11.11|
+|.1111|11111|11111|11111|
+|.11.1|1.111|1111.|11.11|
+|111.1|11.11|111.1|111.1|
+|1111.|11111|.1111|11111|
 +-----+-----+-----+-----+
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
-|.....|.....|.....|.....|
+|11.11|11111|11111|1.111|
+|11111|11.11|111.1|11111|
+|111..|111.1|11111|11.11|
+|.1111|11111|1.111|1111.|
+|.1..1|.1..1|.1..1|.1...|
+|.1..1|.1..1|.1..1|.1...|
+|1..1.|1..1.|1..1.|1....|
+|1..1.|1..1.|1..1.|1....|
 +-----+-----+-----+-----+
 */
+
+// Nuage avec pluie - 8 caractères personnalisés
+byte pluie[8][8] = {
+  {0x00, 0x00, 0x03, 0x07, 0x0F, 0x0D, 0x1D, 0x1E}, // 0: Haut-gauche (Nuage)
+  {0x00, 0x00, 0x1C, 0x1C, 0x1F, 0x17, 0x1B, 0x1F}, // 1: Haut-centre-g (Nuage)
+  {0x00, 0x00, 0x03, 0x0F, 0x1F, 0x1E, 0x1D, 0x0F}, // 2: Haut-centre-d (Nuage)
+  {0x00, 0x1C, 0x17, 0x1B, 0x1F, 0x1B, 0x1D, 0x1F}, // 3: Haut-droit (Nuage)
+  {0x1B, 0x1F, 0x1C, 0x0F, 0x09, 0x09, 0x12, 0x12}, // 4: Bas-gauche (Pluie)
+  {0x1F, 0x1B, 0x1D, 0x1F, 0x09, 0x09, 0x12, 0x12}, // 5: Bas-centre-g (Pluie)
+  {0x1F, 0x1D, 0x1F, 0x17, 0x09, 0x09, 0x12, 0x12}, // 6: Bas-centre-d (Pluie)
+  {0x17, 0x1F, 0x1B, 0x1E, 0x08, 0x08, 0x10, 0x10}  // 7: Bas-droit (Pluie)
+};
+
+/*
+=> Trop CO
+    1    2    3    4
+01234 56789 01234 56789
++-----+-----+-----+-----+
+|.....|.....|.....|.....|
+|.....|.....|.....|111..|
+|...11|11...|...11|1.11.|
+|..111|111..|.1111|11.11|
+|.1111|11111|11111|11111|
+|.11.1|1.111|1111.|11.11|
+|111.1|11.11|111.1|111.1|
+|1111.|11111|.1111|11111|
++-----+-----+-----+-----+
+|11.11|11111|11111|1.111|
+|11111|11.11|111.1|11111|
+|111..|111.1|11111|11.11|
+|.1111|11111|1.111|1111.|
+|.1..1|.1..1|.1..1|.1...|
+|.1..1|.1..1|.1..1|.1...|
+|1..1.|1..1.|1..1.|1....|
+|1..1.|1..1.|1..1.|1....|
++-----+-----+-----+-----+
+
+byte tropco[8][8] = {
+  {0x00, 0x00, 0x03, 0x07, 0x0F, 0x0D, 0x1D, 0x1E}, // 0: Haut-gauche (Nuage)
+  {0x00, 0x00, 0x1C, 0x1C, 0x1F, 0x17, 0x1B, 0x1F}, // 1: Haut-centre-g (Nuage)
+  {0x00, 0x00, 0x03, 0x0F, 0x1F, 0x1E, 0x1D, 0x0F}, // 2: Haut-centre-d (Nuage)
+  {0x00, 0x1C, 0x17, 0x1B, 0x1F, 0x1B, 0x1D, 0x1F}, // 3: Haut-droit (Nuage)
+  {0x1B, 0x1F, 0x1C, 0x0F, 0x09, 0x09, 0x12, 0x12}, // 4: Bas-gauche (Pluie)
+  {0x1F, 0x1B, 0x1D, 0x1F, 0x09, 0x09, 0x12, 0x12}, // 5: Bas-centre-g (Pluie)
+  {0x1F, 0x1D, 0x1F, 0x17, 0x09, 0x09, 0x12, 0x12}, // 6: Bas-centre-d (Pluie)
+  {0x17, 0x1F, 0x1B, 0x1E, 0x08, 0x08, 0x10, 0x10}  // 7: Bas-droit (Pluie)
+};
+*/
+
 // ========== VARIABLES AFFICHAGE LCD ==========
 // Variables pour le défilement des infos
 const unsigned long INFO_DURATION = 3000;  // 3sec par info
@@ -365,6 +414,34 @@ void printBigDigit(int digit, int col, int row) {
   }
 }
 
+// Affiche un nombre entier en gros avec une décimale sur la ligne lign et colonne col
+void printBigNumber(float number, int col, int lign) {
+
+  int entier = (int)number;
+  int decimale = (int)((number - entier) * 10);
+
+  lcd.setCursor(0, lign); lcd.print("                    "); // Effacer ligne haute
+  lcd.setCursor(0, lign+1); lcd.print("                    "); // Effacer ligne basse
+  
+  // Convertir en string pour compter les chiffres
+  String entierStr = String(entier);
+  int numDigitsEntier = entierStr.length();
+
+  // Afficher chaque chiffre
+  for(int i = 0; i < entierStr.length(); i++) {
+    int digit = entierStr.charAt(i) - '0';  // Convertir char en int
+    printBigDigit(digit, col + (i * 4), lign);
+  }
+
+  // Point décimal (caractère standard '.')
+  int pointCol = col + (numDigitsEntier * 4);
+  lcd.setCursor(pointCol, lign+1);
+  lcd.print(".");  // ← Point standard du LCD
+
+  // Partie décimale
+  printBigDigit(decimale, pointCol+1, lign);
+}
+
 void lcdslotsoleil() { 
   // Charger les 8 caractères personnalisés
   for (int i = 0; i < 8; i++) {
@@ -385,21 +462,14 @@ void lcdslotnuage() {
     lcd.createChar(i, nuage[i]);
   }  
 }
-/*
+
 void lcdslotpluie() {
   // Charger les 8 caractères personnalisés
   for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuageSoleil[i]);
+    lcd.createChar(i, pluie[i]);
   }  
 }
-void lcdslotdangerCO(){
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, nuageSoleil[i]);
-  }  
-}
-  
-*/
+
 
 // ========== FONCTION D'AFFICHAGE MÉTÉO ==========
 
@@ -434,38 +504,20 @@ void printMeteo(int type, int col, int row) {
   lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
 }
 
-// Affiche un nombre entier en gros avec une décimale sur la ligne lign et colonne col
-void printBigNumber(float number, int col, int lign) {
-
-  int entier = (int)number;
-  int decimale = (int)((number - entier) * 10);
-
-  lcd.setCursor(0, lign); lcd.print("                    "); // Effacer ligne haute
-  lcd.setCursor(0, lign+1); lcd.print("                    "); // Effacer ligne basse
-  
-  // Convertir en string pour compter les chiffres
-  String entierStr = String(entier);
-  int numDigitsEntier = entierStr.length();
-
-  /*/
-  // Calcul position de départ pour centrer (chaque chiffre = 3 colonnes + 1 espace)
-  int startCol = (20 - (numDigits * 4 - 1)) / 2;
-  */
-
-  // Afficher chaque chiffre
-  for(int i = 0; i < entierStr.length(); i++) {
-    int digit = entierStr.charAt(i) - '0';  // Convertir char en int
-    printBigDigit(digit, col + (i * 4), lign);
-  }
-
-  // Point décimal (caractère standard '.')
-  int pointCol = col + (numDigitsEntier * 4);
-  lcd.setCursor(pointCol, lign+1);
-  lcd.print(".");  // ← Point standard du LCD
-
-  // Partie décimale
-  printBigDigit(decimale, pointCol+1, lign);
+/*
+void lcdslotdangerCO(){
+  // Charger les 8 caractères personnalisés
+  for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, tropco[i]);
+  }  
 }
+*/
+
+// Alerte excès de CO
+void printCO(){
+
+}
+
 
 void setup_wifi() {
   
@@ -726,6 +778,8 @@ void loop() {
       } else {
         printMeteo(3, 2, 0);
       }
+    } else {
+      printCO();
     }
 
     
