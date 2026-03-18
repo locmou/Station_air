@@ -38,6 +38,7 @@ uint8_t bright;
 float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, à calibrer)
 unsigned long last_3m_time = -CYCLE_3mn;
 int rawValue;
+int rotation=5;
 float rs;
 float ratio;
 float ppm;
@@ -513,17 +514,17 @@ void printMeteo(int type, int col, int row) {
   lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
 }
 
-/*
-void lcdslotdangerCO(){
-  // Charger les 8 caractères personnalisés
-  for (int i = 0; i < 8; i++) {
-    lcd.createChar(i, tropco[i]);
-  }  
-}
-*/
 
 // Alerte excès de CO
-void printCO(){
+void printCO(col,row){
+for (int i = 0; i < 8; i++) {
+    lcd.createChar(i, tropco[i]);
+  }
+ lcd.setCursor(col, row);
+  lcd.write(0); lcd.write(1); lcd.write(2); lcd.write(3);
+  lcd.setCursor(col, row + 1);
+  lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
+
 
 }
 
@@ -742,6 +743,38 @@ void loop() {
   if (now - last_30s_time >= CYCLE_30s) {
     last_30s_time = now;   
 
+// Provisoire pour essayer tous les affichages
+    rotation=rotation+1;
+    if (rotation==6) {rotation=0};
+    switch(rotation) {
+      case 0: 
+        aff=MODE_T;
+      break;
+      
+      case 1: 
+        aff=MODE_P
+      break;
+
+      case 2: 
+        aff=MODE_P
+      break;
+
+      case 3:  
+        aff=MODE_P
+      break;
+
+      case 4: 
+        aff=MODE_P
+      break;
+      
+      case 5: 
+        aff=MODE_CO
+      break;
+
+    }
+
+
+
     // Lecture capteurs
     sensors_event_t humid, tempAHT;
     aht.getEvent(&humid, &tempAHT);
@@ -778,6 +811,19 @@ void loop() {
         lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
       }
     } else if (aff==MODE_P){
+                                                              // Provisoire pour test
+                                                                    if (rotation===1){       
+                                                                      printMeteo(0, 2, 0);
+                                                                    } else if (rotation==2){        
+                                                                      printMeteo(1, 2, 0);
+                                                                    } else if (rotation==3){
+                                                                      printMeteo(2, 2, 0);
+                                                                    } else {
+                                                                      printMeteo(3, 2, 0);
+                                                                    }
+                                                              //
+                                                              //
+      /*
       if (press_hPa>1015){       
         printMeteo(0, 2, 0);
       } else if (press_hPa>1002){        
@@ -787,8 +833,9 @@ void loop() {
       } else {
         printMeteo(3, 2, 0);
       }
+        */
     } else {
-      printCO();
+      printCO(2,0);
     }
 
     
