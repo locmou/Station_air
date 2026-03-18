@@ -117,6 +117,7 @@ byte soleil[8][8] = {
 |.....|.....|...1.|.....|
 +-----+-----+-----+-----+
 */
+
 // Nuage avec soleil - 8 caractères personnalisés
 byte nuageSoleil[8][8] = {
   {0x00, 0x00, 0x03, 0x05, 0x0F, 0x0F, 0x0F, 0x0F}, // 0: Bordure gauche
@@ -153,6 +154,7 @@ byte nuageSoleil[8][8] = {
 |.....|.....|.....|.....|
 +-----+-----+-----+-----+
 */
+
 // Nuage seul - 8 caractères personnalisés
 byte nuage[8][8] = {
   {0x00, 0x00, 0x03, 0x07, 0x0F, 0x0D, 0x1D, 0x1E}, // 0: Haut-gauche
@@ -164,6 +166,7 @@ byte nuage[8][8] = {
   {0x1F, 0x1D, 0x1F, 0x17, 0x03, 0x00, 0x00, 0x00}, // 6: Bas-centre-d
   {0x17, 0x1F, 0x1B, 0x1F, 0x1E, 0x00, 0x00, 0x00}  // 7: Bas-droit
 };
+
 /*
 => Nuages pluie
     1    2    3    4
