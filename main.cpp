@@ -1,5 +1,7 @@
 /*
-Reste à faire : modif affichage Température en gros, 
+Reste à faire : mqtt double sens.
+Affichages météo selon la presssion 
+
 
 
 
@@ -137,19 +139,19 @@ byte nuageSoleil[8][8] = {
 01234 56789 01234 56789
 +-----+-----+-----+-----+
 |.....|.....|.....|.....|
-|.....|.....|.....|111..|
-|...11|11...|...11|1.11.|
-|..111|111..|.1111|11.11|
-|.1111|11111|11111|11111|
-|.11.1|1.111|1111.|11.11|
-|111.1|11.11|111.1|111.1|
-|1111.|11111|.1111|11111|
+|.....|.....|.....|.....|
+|.....|.....|.....|.....|
+|....1|11...|.....|.....|
+|..111|1111.|...11|11...|
+|.11.1|1.111|.111.|1111.|
+|.11.1|11.11|111.1|111.1|
+|1111.|1111.|.1111|.1111|
 +-----+-----+-----+-----+
-|11.11|11111|11111|1.111|
+|11.11|11.11|11111|1.111|
 |11111|11.11|111.1|11111|
-|111..|111.1|11111|11.11|
-|.1111|11111|1.111|11111|
-|..111|11111|...11|1111.|
+|.11..|111.1|11111|11.1.|
+|..111|11111|1.111|111..|
+|.....|.....|.....|.....|
 |.....|.....|.....|.....|
 |.....|.....|.....|.....|
 |.....|.....|.....|.....|
@@ -158,14 +160,14 @@ byte nuageSoleil[8][8] = {
 
 // Nuage seul - 8 caractères personnalisés
 byte nuage[8][8] = {
-  {0x00, 0x00, 0x03, 0x07, 0x0F, 0x0D, 0x1D, 0x1E}, // 0: Haut-gauche
-  {0x00, 0x00, 0x1C, 0x1C, 0x1F, 0x17, 0x1B, 0x1F}, // 1: Haut-centre-g
-  {0x00, 0x00, 0x03, 0x0F, 0x1F, 0x1E, 0x1D, 0x0F}, // 2: Haut-centre-d
-  {0x00, 0x1C, 0x17, 0x1B, 0x1F, 0x1B, 0x1D, 0x1F}, // 3: Haut-droit
-  {0x1B, 0x1F, 0x1C, 0x0F, 0x07, 0x00, 0x00, 0x00}, // 4: Bas-gauche
-  {0x1F, 0x1B, 0x1D, 0x1F, 0x1F, 0x00, 0x00, 0x00}, // 5: Bas-centre-g
-  {0x1F, 0x1D, 0x1F, 0x17, 0x03, 0x00, 0x00, 0x00}, // 6: Bas-centre-d
-  {0x17, 0x1F, 0x1B, 0x1F, 0x1E, 0x00, 0x00, 0x00}  // 7: Bas-droit
+  {0x00, 0x00, 0x00, 0x01, 0x07, 0x0D, 0x0D, 0x1E}, // 0: Bordure gauche
+  {0x00, 0x00, 0x00, 0x18, 0x1E, 0x17, 0x1B, 0x1E}, // 1: Cœur gauche
+  {0x00, 0x00, 0x00, 0x00, 0x03, 0x0E, 0x1D, 0x0F}, // 2: Transition
+  {0x00, 0x00, 0x00, 0x00, 0x18, 0x1E, 0x1D, 0x0F}, // 3: Cœur droit
+  {0x1B, 0x1F, 0x0C, 0x07, 0x00, 0x00, 0x00, 0x00}, // 4: Base gauche
+  {0x1B, 0x1B, 0x1D, 0x1F, 0x00, 0x00, 0x00, 0x00}, // 5: Base centre-g
+  {0x1F, 0x1D, 0x1F, 0x17, 0x00, 0x00, 0x00, 0x00}, // 6: Base centre-d
+  {0x17, 0x1F, 0x1A, 0x1C, 0x00, 0x00, 0x00, 0x00}  // 7: Base droite
 };
 
 /*
@@ -522,6 +524,27 @@ for (int i = 0; i < 8; i++) {
 }
 
 
+void affichmesures(){
+  // Affichage des première lignes
+  lcd.setCursor(8, 1);
+  lcd.printf("%4.0fhPa", press_hPa);
+
+        // LCD ligne 2-3
+      lcd.setCursor(0, 2); 
+      lcd.printf("Tmp: %.1fC Hum:%4.1f%% ",tempture, Humite);
+      lcd.setCursor(0, 3);
+      // Afficher statut connexion
+      if (WiFi.status() != WL_CONNECTED) {
+        lcd.print("WiFi:OFF ");
+      } else if (!client.connected()) {
+        lcd.print("MQTT:OFF ");
+      } else {
+        lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
+      }
+
+
+}
+
 void setup_wifi() {
   
   Serial.println("=== Connexion WiFi ===");
@@ -737,8 +760,7 @@ void loop() {
     last_30s_time = now;   
 
 // Provisoire pour essayer tous les affichages
-    rotation=rotation+1;
-    if (rotation==6) {rotation=0;};
+    rotation=1;
     switch(rotation) {
       case 0: 
         aff=MODE_T;
@@ -796,7 +818,7 @@ void loop() {
         lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
       }
     } else if (aff==MODE_P){
-                                                              // Provisoire pour test
+                                                             /* // Provisoire pour test
                                                                     if (rotation==1){       
                                                                       printMeteo(0, 2, 0);
                                                                     } else if (rotation==2){        
@@ -806,9 +828,10 @@ void loop() {
                                                                     } else {
                                                                       printMeteo(3, 2, 0);
                                                                     }
+                                                                    
                                                               //
-                                                              //
-      /*
+                                                              //*/
+      
       if (press_hPa>1015){       
         printMeteo(0, 2, 0);
       } else if (press_hPa>1002){        
@@ -818,7 +841,8 @@ void loop() {
       } else {
         printMeteo(3, 2, 0);
       }
-        */
+        
+      affichmesures();
     } else {
       printco(2,0);
     }
