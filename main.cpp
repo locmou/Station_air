@@ -523,7 +523,7 @@ for (int i = 0; i < 8; i++) {
   lcd.write(4); lcd.write(5); lcd.write(6); lcd.write(7);
 }
 
-
+// Affichage de toutes les mesures en mode presssion
 void affichmesures(){
   // Affichage des première lignes
   lcd.setCursor(8, 1);
