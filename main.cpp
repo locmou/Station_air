@@ -17,6 +17,7 @@ Affichages météo selon la presssion
 #define MQTT_MAX_PACKET_SIZE 1700
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include "secrets.h"
 
 // ========== OBJETS CAPTEURS ==========
 Adafruit_AHTX0 aht;
@@ -583,7 +584,7 @@ void setup_wifi() {
   WiFi.mode(WIFI_STA); // Mode Station (client WiFi)
 
   // Ajoute ici tous les réseaux possibles
-  wifiMulti.addAP("Mounwiff",    "rue_de_la_Grande680Plage_10!");
+  wifiMulti.addAP(WIFI_SSID_1, WIFI_PASS_1);
 
   //wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
   Serial.print("Connexion en cours");
