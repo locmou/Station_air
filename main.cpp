@@ -522,7 +522,7 @@ void affichmesures23() {
   } else if (!client.connected()) {
     lcd.print("MQTT:OFF ");
   } else {
-    lcd.printf("CO:%7.4f  Lum:%4.0fhPa  ", ppm, press_hPa);
+    lcd.printf("CO:%7.4f P:%4.0fhPa  ", ppm, press_hPa);
   }
 }
 
