@@ -349,6 +349,7 @@ void Retroeclairage(){
 
 /**********************************Lecture mq7************************************************ */
 float readRS(int adcValue) {
+  if (adcValue == 0) return 9999; // sécurité
   // Conversion ADC vers tension (0-3.3V sur ESP32)
   float voltage = (adcValue / ADC_RESOLUTION) * 3.3; 
   // Calcul de RS : RS = [(Vc × RL) / Vout] - RL
@@ -434,7 +435,7 @@ void clean2prems(int lign){
 void printBigNumber(float number, int col, int lign) {
 
   int entier = (int)number;
-  int decimale = (int)((number - entier) * 10);
+  int decimale = abs((int)((number - entier) * 10));
   clean2prems(lign);
   
   // Convertir en string pour compter les chiffres
@@ -536,6 +537,53 @@ void affichmesures23() {
     lcd.printf("CO:%7.4f  Lum:%4.0fhPa  ", ppm, press_hPa);
   }
 }
+
+void affichageModeT() { 
+  lcdslotbigdigit();
+  // LCD ligne 0 - 1
+  printBigNumber(tempture,4,0);
+  lcd.setCursor(16, 1);
+  lcd.write(0xDF);
+  lcd.print("C");
+
+  // LCD ligne 2-3
+  lcd.setCursor(0, 2); 
+  lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
+  lcd.setCursor(0, 3);
+  // Afficher statut connexion
+  if (WiFi.status() != WL_CONNECTED) {
+    lcd.print("WiFi:OFF ");
+  } else if (!client.connected()) {
+    lcd.print("MQTT:OFF ");
+  } else {
+    lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
+  }
+ }
+
+void affichageModeP() { 
+   if (press_hPa>1015){       
+          printMeteo(0, 2, 0);
+        } else if (press_hPa>1002){        
+          printMeteo(1, 2, 0);
+        } else if (press_hPa>990){
+          printMeteo(2, 2, 0);
+        } else {
+          printMeteo(3, 2, 0);
+        }
+        // Affichage des première lignes
+        lcd.setCursor(8, 1);
+        lcd.printf("%4.0fhPa", press_hPa);
+        affichmesures23();
+ }
+
+void affichageAlerte() { 
+  printco(2,0);
+      lcd.setCursor(10,1);
+      lcd.print("En excès!");
+
+      affichmesures23();
+ }
+
 
 void setup_wifi() {
   
@@ -771,51 +819,14 @@ void loop() {
     //*********************************************** 
     // ***************Affichage LCD******************
     //*********************************************** 
-    //Alerte PPM
-    if (ppm<10){
-      if (aff==MODE_T){
-        lcdslotbigdigit();
-        // LCD ligne 0 - 1
-        printBigNumber(tempture,4,0);
-        lcd.setCursor(16, 1);
-        lcd.write(0xDF);
-        lcd.print("C");
-
-        // LCD ligne 2-3
-        lcd.setCursor(0, 2); 
-        lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
-        lcd.setCursor(0, 3);
-        // Afficher statut connexion
-        if (WiFi.status() != WL_CONNECTED) {
-          lcd.print("WiFi:OFF ");
-        } else if (!client.connected()) {
-          lcd.print("MQTT:OFF ");
-        } else {
-          lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
-        }
-      } else if (aff==MODE_P){
-        if (press_hPa>1015){       
-          printMeteo(0, 2, 0);
-        } else if (press_hPa>1002){        
-          printMeteo(1, 2, 0);
-        } else if (press_hPa>990){
-          printMeteo(2, 2, 0);
-        } else {
-          printMeteo(3, 2, 0);
-        }
-        // Affichage des première lignes
-        lcd.setCursor(8, 1);
-        lcd.printf("%4.0fhPa", press_hPa);
-        affichmesures23();
-      } 
+   
+    if (ppm >= 10) {
+      affichageAlerte();
     } else {
-      printco(2,0);
-      lcd.setcursor(10,1);
-      lcd.print("En excès!");
-      affichmesures23();
+      if (aff == MODE_T) affichageModeT();
+      else affichageModeP();
     }
 
-    
     // 1. Vérifier WiFi
     if (WiFi.status() != WL_CONNECTED) {
       Serial.println("WiFi perdu, reconnexion...");
