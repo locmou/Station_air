@@ -1,9 +1,5 @@
 /*
 Reste à faire : mqtt double sens.
-Affichages météo selon la presssion 
-
-
-
 
 */
 
@@ -585,7 +581,6 @@ void setup_wifi() {
 
   // Ajoute ici tous les réseaux possibles
   wifiMulti.addAP(WIFI_SSID_1, WIFI_PASS_1);
-  wifiMulti.addAP(WIFI_SSID_2, WIFI_PASS_2);
 
   
   Serial.print("Connexion en cours");
