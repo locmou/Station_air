@@ -1,6 +1,5 @@
 /*
-Reste à faire : mqtt double sens.
-
+Reste à faire : mqtt double sens pour une bascule en mode T ou P depuis HA et Pourquoi pas un mode bilan énergétique ou watt instantané poussé depuis home assitant...
 */
 
 #include <Arduino.h>
