@@ -252,10 +252,10 @@ byte tropco[8][8] = {
 WiFiMulti wifiMulti;
 
 // ========== CONFIG MQTT ==========
-const char* mqtt_server = "192.168.1.11";
-const int   mqtt_port   = 1883;
-const char* mqtt_user = "loic.mounier@laposte.net";
-const char* mqtt_pass = "vgo:?2258H";
+const char* mqtt_server = MQTT_SERVER;
+const int   mqtt_port   = MQTT_PORT;
+const char* mqtt_user   = MQTT_USER;
+const char* mqtt_pass   = MQTT_PASS;
 
 // ========== AJOUT : Variables pour gestion des reconnexions ==========
 unsigned long last_1s_time = 0; 
@@ -276,7 +276,7 @@ const char discovery_temp_json[] PROGMEM = R"({
 "dev_cla":"temperature",
 "unit_of_meas":"°C",
 "val_tpl":"{{value_json.temperature}}",
-"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_hum_json[] PROGMEM = R"({
@@ -287,7 +287,7 @@ const char discovery_hum_json[] PROGMEM = R"({
 "dev_cla":"humidity",
 "unit_of_meas":"%",
 "val_tpl":"{{value_json.humidity}}",
-"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_co_json[] PROGMEM = R"({
@@ -297,7 +297,7 @@ const char discovery_co_json[] PROGMEM = R"({
 "avty_t":"stationair/status",
 "unit_of_meas":"ppm",
 "val_tpl":"{{value_json.co}}",
-"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_press_json[] PROGMEM = R"({
@@ -308,7 +308,7 @@ const char discovery_press_json[] PROGMEM = R"({
 "dev_cla":"pressure",
 "unit_of_meas":"hPa",
 "val_tpl":"{{value_json.pressure}}",
-"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 // Après les 4 messages discovery_xxx_json
@@ -585,8 +585,9 @@ void setup_wifi() {
 
   // Ajoute ici tous les réseaux possibles
   wifiMulti.addAP(WIFI_SSID_1, WIFI_PASS_1);
+  wifiMulti.addAP(WIFI_SSID_2, WIFI_PASS_2);
 
-  //wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
+  
   Serial.print("Connexion en cours");
 
   // Tentative de connexion (timeout 10 secondes)
@@ -618,7 +619,7 @@ void reconnect_mqtt() {
   Serial.print("...");
 
 
-  if (client.connect("stationair", mqtt_user, mqtt_pass,
+  if (client.connect(DEVICE_NAME, mqtt_user, mqtt_pass,
                      "stationair/status", 0, true, "offline")) {
     
     Serial.println(" OK !");

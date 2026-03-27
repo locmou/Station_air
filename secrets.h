@@ -15,4 +15,7 @@
 #define MQTT_USER "loic.mounier@laposte.net"
 #define MQTT_PASS "vgo:?2258H"
 
+// ====== DEVICE NAME ======
+#define DEVICE_NAME "stationair"
+
 #endif
