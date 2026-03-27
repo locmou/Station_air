@@ -40,7 +40,6 @@ uint8_t bright;
 float Ro = 1.95;  // Résistance du capteur dans l'air pur (valeur par défaut, à calibrer)
 unsigned long last_3m_time = -CYCLE_3mn;
 int rawValue;
-int rotation=5;
 float rs;
 float ratio;
 float ppm;
@@ -331,7 +330,6 @@ enum modeaff
 {
   MODE_T,
   MODE_P,
-  MODE_CO,
 };
 
 modeaff aff;
@@ -524,37 +522,30 @@ for (int i = 0; i < 8; i++) {
 }
 
 // Affichage de toutes les mesures en mode presssion
-void affichmesures(){
-  // Affichage des première lignes
-  lcd.setCursor(8, 1);
-  lcd.printf("%4.0fhPa", press_hPa);
-
-        // LCD ligne 2-3
-      lcd.setCursor(0, 2); 
-      lcd.printf("Tmp: %.1fC Hum:%4.1f%% ",tempture, Humite);
-      lcd.setCursor(0, 3);
-      // Afficher statut connexion
-      if (WiFi.status() != WL_CONNECTED) {
-        lcd.print("WiFi:OFF ");
-      } else if (!client.connected()) {
-        lcd.print("MQTT:OFF ");
-      } else {
-        lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
-      }
-
-
+void affichmesures23() {
+  // LCD ligne 2-3
+  lcd.setCursor(0, 2); 
+  lcd.printf("Tmp: %.1fC Hum:%4.1f%% ",tempture, Humite);
+  lcd.setCursor(0, 3);
+  // Afficher statut connexion
+  if (WiFi.status() != WL_CONNECTED) {
+    lcd.print("WiFi:OFF ");
+  } else if (!client.connected()) {
+    lcd.print("MQTT:OFF ");
+  } else {
+    lcd.printf("CO:%7.4f  Lum:%4.0fhPa  ", ppm, press_hPa);
+  }
 }
 
 void setup_wifi() {
   
   Serial.println("=== Connexion WiFi ===");
-
   WiFi.mode(WIFI_STA); // Mode Station (client WiFi)
 
   // Ajoute ici tous les réseaux possibles
   wifiMulti.addAP("Mounwiff",    "rue_de_la_Grande680Plage_10!");
-  //wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
 
+  //wifiMulti.addAP("Mounwiff", "en_face_du_20_rue_des_joncs");
   Serial.print("Connexion en cours");
 
   // Tentative de connexion (timeout 10 secondes)
@@ -755,32 +746,9 @@ void loop() {
 
   /*Toutes les 30' vérification mqtt et affichage lcd*/
 
-  // ===== VÉRIFICATION WIFI + MQTT + lecture  capteurs TOUTES LES 30 SECONDES =====
+  // ===== VÉRIFICATION WIFI + MQTT + lecture  capteurs + affichage TOUTES LES 30 SECONDES =====
   if (now - last_30s_time >= CYCLE_30s) {
     last_30s_time = now;   
-
-// Provisoire pour essayer tous les affichages
-    rotation=1;
-    switch(rotation) {
-      case 0: 
-        aff=MODE_T;
-      break;
-      case 1: 
-        aff=MODE_P;
-      break;
-      case 2: 
-        aff=MODE_P;
-      break;
-      case 3:  
-        aff=MODE_P;
-      break;
-      case 4: 
-        aff=MODE_P;
-      break;      
-      case 5: 
-        aff=MODE_CO;
-      break;
-    }
 
     // Lecture capteurs
     sensors_event_t humid, tempAHT;
@@ -793,58 +761,58 @@ void loop() {
     rs = readRS(rawValue);
     ratio = rs / Ro;
     ppm = calculatePPM(ratio);
+  
    
     // Affichage série
     Serial.println("===== Nouvelles mesures =====");
 
-    if (aff==MODE_T){
-      lcdslotbigdigit();
-      // LCD ligne 0 - 1
-      printBigNumber(tempture,4,0);
-      lcd.setCursor(16, 1);
-      lcd.write(0xDF);
-      lcd.print("C");
 
-      // LCD ligne 2-3
-      lcd.setCursor(0, 2); 
-      lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
-      lcd.setCursor(0, 3);
-      // Afficher statut connexion
-      if (WiFi.status() != WL_CONNECTED) {
-        lcd.print("WiFi:OFF ");
-      } else if (!client.connected()) {
-        lcd.print("MQTT:OFF ");
-      } else {
-        lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
-      }
-    } else if (aff==MODE_P){
-                                                             /* // Provisoire pour test
-                                                                    if (rotation==1){       
-                                                                      printMeteo(0, 2, 0);
-                                                                    } else if (rotation==2){        
-                                                                      printMeteo(1, 2, 0);
-                                                                    } else if (rotation==3){
-                                                                      printMeteo(2, 2, 0);
-                                                                    } else {
-                                                                      printMeteo(3, 2, 0);
-                                                                    }
-                                                                    
-                                                              //
-                                                              //*/
-      
-      if (press_hPa>1015){       
-        printMeteo(0, 2, 0);
-      } else if (press_hPa>1002){        
-        printMeteo(1, 2, 0);
-      } else if (press_hPa>990){
-        printMeteo(2, 2, 0);
-      } else {
-        printMeteo(3, 2, 0);
-      }
-        
-      affichmesures();
+
+    //*********************************************** 
+    // ***************Affichage LCD******************
+    //*********************************************** 
+    //Alerte PPM
+    if (ppm<10){
+      if (aff==MODE_T){
+        lcdslotbigdigit();
+        // LCD ligne 0 - 1
+        printBigNumber(tempture,4,0);
+        lcd.setCursor(16, 1);
+        lcd.write(0xDF);
+        lcd.print("C");
+
+        // LCD ligne 2-3
+        lcd.setCursor(0, 2); 
+        lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
+        lcd.setCursor(0, 3);
+        // Afficher statut connexion
+        if (WiFi.status() != WL_CONNECTED) {
+          lcd.print("WiFi:OFF ");
+        } else if (!client.connected()) {
+          lcd.print("MQTT:OFF ");
+        } else {
+          lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
+        }
+      } else if (aff==MODE_P){
+        if (press_hPa>1015){       
+          printMeteo(0, 2, 0);
+        } else if (press_hPa>1002){        
+          printMeteo(1, 2, 0);
+        } else if (press_hPa>990){
+          printMeteo(2, 2, 0);
+        } else {
+          printMeteo(3, 2, 0);
+        }
+        // Affichage des première lignes
+        lcd.setCursor(8, 1);
+        lcd.printf("%4.0fhPa", press_hPa);
+        affichmesures23();
+      } 
     } else {
       printco(2,0);
+      lcd.setcursor(10,1);
+      lcd.print("En excès!");
+      affichmesures23();
     }
 
     
