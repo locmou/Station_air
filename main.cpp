@@ -247,14 +247,6 @@ byte tropco[8][8] = {
   {0x03, 0x03, 0x03, 0x03, 0x07, 0x1E, 0x1C, 0x00}  // 7: O Bas-Droite (fermé)
 };
 
-
-// ========== VARIABLES AFFICHAGE LCD ==========
-// Variables pour le défilement des infos
-const unsigned long INFO_DURATION = 3000;  // 3sec par info
-unsigned long lastInfoChange = -INFO_DURATION;
-int currentInfo = 0;  // 0=RS, 1=Ratio, 2=Brut
-int lastDisplayedInfo = -1;  // Pour savoir si l'affichage a changé
-
 // ========== CONFIG WIFI ==========
 WiFiMulti wifiMulti;
 
