@@ -318,10 +318,12 @@ enum modeaff
 {
   MODE_T,
   MODE_P,
+  InfoHA1,
+  InfoHA2,
+  InfoHA3
 };
 
 modeaff aff;
-
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -550,17 +552,23 @@ void affichageModeT() {
 
 void affichageModeP() { 
    if (press_hPa>1015){       
-          printMeteo(0, 2, 0);
+          printMeteo(0, 0, 0);
+          lcd.setCursor(8, 1);
+          lcd.print("Beau temps");
         } else if (press_hPa>1002){        
-          printMeteo(1, 2, 0);
+          printMeteo(1, 0, 0);
+          lcd.setCursor(8, 1);
+          lcd.print("Variable");
         } else if (press_hPa>990){
-          printMeteo(2, 2, 0);
+          printMeteo(2, 0, 0);          
+          lcd.setCursor(8, 1);
+          lcd.print("Pluie");
         } else {
-          printMeteo(3, 2, 0);
+          printMeteo(3, 0, 0);
+          lcd.setCursor(8, 1);
+          lcd.print("Tempête");
         }
-        // Affichage des première lignes
-        lcd.setCursor(8, 1);
-        lcd.printf("%4.0fhPa", press_hPa);
+        // Affichage des dernières lignes
         affichmesures23();
  }
 
@@ -812,7 +820,14 @@ void loop() {
       affichageAlerte();
     } else {
       if (aff == MODE_T) affichageModeT();
-      else affichageModeP();
+      else if (aff==MODE_P) affichageModeP();
+      else if (aff==InfoHA1){
+
+      } else if (aff==InfoHA2){
+
+      } else {
+
+      }
     }
 
     // 1. Vérifier WiFi
