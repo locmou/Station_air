@@ -271,7 +271,7 @@ const char discovery_temp_json[] PROGMEM = R"({
 "dev_cla":"temperature",
 "unit_of_meas":"°C",
 "val_tpl":"{{value_json.temperature}}",
-"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_hum_json[] PROGMEM = R"({
@@ -282,7 +282,7 @@ const char discovery_hum_json[] PROGMEM = R"({
 "dev_cla":"humidity",
 "unit_of_meas":"%",
 "val_tpl":"{{value_json.humidity}}",
-"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_co_json[] PROGMEM = R"({
@@ -292,7 +292,7 @@ const char discovery_co_json[] PROGMEM = R"({
 "avty_t":"stationair/status",
 "unit_of_meas":"ppm",
 "val_tpl":"{{value_json.co}}",
-"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_press_json[] PROGMEM = R"({
@@ -303,7 +303,7 @@ const char discovery_press_json[] PROGMEM = R"({
 "dev_cla":"pressure",
 "unit_of_meas":"hPa",
 "val_tpl":"{{value_json.pressure}}",
-"device":{"ids":[DEVICE_NAME],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 // Après les 4 messages discovery_xxx_json
@@ -516,7 +516,7 @@ for (int i = 0; i < 8; i++) {
 void affichmesures23() {
   // LCD ligne 2-3
   lcd.setCursor(0, 2); 
-  lcd.printf("Tmp: %.1fC Hum:%4.1f%% ",tempture, Humite);
+  lcd.printf("Tmp: %.1fC Hum:%4.1f%%",tempture, Humite);
   lcd.setCursor(0, 3);
   // Afficher statut connexion
   if (WiFi.status() != WL_CONNECTED) {
@@ -524,7 +524,7 @@ void affichmesures23() {
   } else if (!client.connected()) {
     lcd.print("MQTT:OFF ");
   } else {
-    lcd.printf("CO:%7.4f P:%4.0fhPa  ", ppm, press_hPa);
+    lcd.printf("CO:%6.4f P:%4.0fhPa", ppm, press_hPa);
   }
 }
 
@@ -553,19 +553,19 @@ void affichageModeT() {
 void affichageModeP() { 
    if (press_hPa>1015){       
           printMeteo(0, 0, 0);
-          lcd.setCursor(8, 1);
+          lcd.setCursor(8, 0);
           lcd.print("Beau temps");
         } else if (press_hPa>1002){        
           printMeteo(1, 0, 0);
-          lcd.setCursor(8, 1);
+          lcd.setCursor(9, 0);
           lcd.print("Variable");
         } else if (press_hPa>990){
           printMeteo(2, 0, 0);          
-          lcd.setCursor(8, 1);
+          lcd.setCursor(9, 0);
           lcd.print("Pluie");
         } else {
           printMeteo(3, 0, 0);
-          lcd.setCursor(8, 1);
+          lcd.setCursor(8, 0);
           lcd.print("Tempête");
         }
         // Affichage des dernières lignes
@@ -621,7 +621,7 @@ void reconnect_mqtt() {
   Serial.print("...");
 
 
-  if (client.connect(DEVICE_NAME, mqtt_user, mqtt_pass,
+  if (client.connect("stationair", mqtt_user, mqtt_pass,
                      "stationair/status", 0, true, "offline")) {
     
     Serial.println(" OK !");
