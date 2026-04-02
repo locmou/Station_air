@@ -274,7 +274,7 @@ const char discovery_temp_json[] PROGMEM = R"({
 "dev_cla":"temperature",
 "unit_of_meas":"°C",
 "val_tpl":"{{value_json.temperature}}",
-"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_hum_json[] PROGMEM = R"({
@@ -285,7 +285,7 @@ const char discovery_hum_json[] PROGMEM = R"({
 "dev_cla":"humidity",
 "unit_of_meas":"%",
 "val_tpl":"{{value_json.humidity}}",
-"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_co_json[] PROGMEM = R"({
@@ -295,7 +295,7 @@ const char discovery_co_json[] PROGMEM = R"({
 "avty_t":"stationair/status",
 "unit_of_meas":"ppm",
 "val_tpl":"{{value_json.co}}",
-"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 const char discovery_press_json[] PROGMEM = R"({
@@ -306,7 +306,7 @@ const char discovery_press_json[] PROGMEM = R"({
 "dev_cla":"pressure",
 "unit_of_meas":"hPa",
 "val_tpl":"{{value_json.pressure}}",
-"device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 // ========== NOUVEAU : SWITCH MODE AFFICHAGE ==========
@@ -758,6 +758,7 @@ void setup() {
   // Configuration MQTT
   client.setBufferSize(1700);
   client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqtt_callback); 
   client.setKeepAlive(60);
   client.setSocketTimeout(5);
 
@@ -769,7 +770,7 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.clear();
-  aff=MODE_P;
+   aff = MODE_P;
 
   // I2C
   Wire.begin(21, 22);
