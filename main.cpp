@@ -252,6 +252,9 @@ const int   mqtt_port   = MQTT_PORT;
 const char* mqtt_user   = MQTT_USER;
 const char* mqtt_pass   = MQTT_PASS;
 
+WiFiClient espClient;
+PubSubClient client(espClient);
+
 // ========== AJOUT : Variables pour gestion des reconnexions ==========
 unsigned long last_1s_time = 0; 
 const unsigned long CYCLE_30s = 30000;   // Vérifier WiFi toutes les 30s
@@ -306,21 +309,30 @@ const char discovery_press_json[] PROGMEM = R"({
 "device":{"ids":"stationair","name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
+// ========== NOUVEAU : SWITCH MODE AFFICHAGE ==========
+const char discovery_switch_mode[] PROGMEM = R"({
+"name":"Mode Affichage",
+"uniq_id":"stationair_mode",
+"cmd_t":"stationair/mode/set",
+"stat_t":"stationair/mode/state",
+"payload_on":"pression",
+"payload_off":"temperature",
+"state_on":"pression",
+"state_off":"temperature",
+"icon":"mdi:swap-horizontal",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
 // Après les 4 messages discovery_xxx_json
 char mqttBuffer[600];  // Buffer global
 
-
-WiFiClient espClient;
-PubSubClient client(espClient);
 
 // Déclaration des constantes pour les modes
 enum modeaff 
 {
   MODE_T,
   MODE_P,
-  InfoHA1,
-  InfoHA2,
-  InfoHA3
+  InfoHA
 };
 
 modeaff aff;
@@ -537,18 +549,8 @@ void affichageModeT() {
   lcd.print("C");
 
   // LCD ligne 2-3
-  lcd.setCursor(0, 2); 
-  lcd.printf("Hum:%4.1f%%  P:%4.0fhPa",Humite, press_hPa);
-  lcd.setCursor(0, 3);
-  // Afficher statut connexion
-  if (WiFi.status() != WL_CONNECTED) {
-    lcd.print("WiFi:OFF ");
-  } else if (!client.connected()) {
-    lcd.print("MQTT:OFF ");
-  } else {
-    lcd.printf("CO:%7.4f  Lum:%-3d  ", ppm, bright);
-  }
- }
+  affichmesures23();
+}
 
 void affichageModeP() { 
    if (press_hPa>1015){       
@@ -574,12 +576,10 @@ void affichageModeP() {
 
 void affichageAlerte() { 
   printco(2,0);
-      lcd.setCursor(10,1);
-      lcd.print("En excès!");
-
-      affichmesures23();
+  lcd.setCursor(10,1);
+  lcd.print("En excès!");
+  affichmesures23();
  }
-
 
 void setup_wifi() {
   
@@ -621,8 +621,7 @@ void reconnect_mqtt() {
   Serial.print("...");
 
 
-  if (client.connect("stationair", mqtt_user, mqtt_pass,
-                     "stationair/status", 0, true, "offline")) {
+  if (client.connect("stationair", mqtt_user, mqtt_pass,"stationair/status", 0, true, "offline")) {
     
     Serial.println(" OK !");
     mqttReconnectAttempts = 0;  // Reset compteur
@@ -670,9 +669,32 @@ void reconnect_mqtt() {
       client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
       client.endPublish();
     }
-    
+    client.loop();
+    delay(500);
+
+    // ==========  Switch Mode Affichage ==========
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_switch_mode);
+    if (client.beginPublish("homeassistant/switch/stationair_mode/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+
     Serial.println("Discovery OK");
     
+    // Publier l'état actuel du mode
+    const char* current_mode = (aff == MODE_T) ? "temperature" : "pression";
+    client.publish("stationair/mode/state", current_mode, true);
+    
+    // ========== SOUSCRIPTION AUX TOPICS ==========
+    Serial.println("=== Souscription ===");
+    if (client.subscribe("stationair/mode/set")) {
+      Serial.println("✓ stationair/mode/set");
+    }
+    Serial.println("====================");
+
     client.publish("stationair/data", 
                    "{\"temperature\":0,\"humidity\":0,\"co\":0,\"pressure\":0}", 
                    true);
@@ -691,7 +713,36 @@ void reconnect_mqtt() {
   }
 }
 
-
+// ========== CALLBACK MQTT (BIDIRECTIONNEL) ==========
+void mqtt_callback(char* topic, byte* payload, unsigned int length) {
+  Serial.println("\n┌─────────────────────────────");
+  Serial.print("│ MQTT reçu: ");
+  Serial.println(topic);
+  
+  String message = "";
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  Serial.print("│ Payload: ");
+  Serial.println(message);
+  Serial.println("└─────────────────────────────");
+  
+  // Switch mode affichage
+  if (strcmp(topic, "stationair/mode/set") == 0) {
+    if (message == "temperature") {
+      Serial.println("➤ MODE: Température");
+      aff = MODE_T;
+      client.publish("stationair/mode/state", "temperature", true);
+    } else if (message == "pression") {
+      Serial.println("➤ MODE: Pression");
+      aff = MODE_P;
+      client.publish("stationair/mode/state", "pression", true);
+    }
+    
+    // Forcer un rafraîchissement immédiat
+    last_30s_time = millis() - CYCLE_30s;
+  }
+}
 
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
@@ -779,7 +830,7 @@ void loop() {
   if (now - last_1s_time >= 1000) {
     last_1s_time = now;
     if (client.connected()) {
-      client.loop();
+      client.loop();// ← IMPORTANT : Traite les messages MQTT entrants
     }
     //ajuste en permanence l'intensité du rétroéclairage et affiche les mesures sur le port série
     Retroeclairage();
@@ -821,12 +872,7 @@ void loop() {
     } else {
       if (aff == MODE_T) affichageModeT();
       else if (aff==MODE_P) affichageModeP();
-      else if (aff==InfoHA1){
-
-      } else if (aff==InfoHA2){
-
-      } else {
-
+      else  {
       }
     }
 
