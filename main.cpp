@@ -394,6 +394,7 @@ enum modeaff
   MODE_T,
   MODE_P,
   InfoHA
+  MODE_ENERGY
 };
 
 modeaff aff;
@@ -759,6 +760,14 @@ void reconnect_mqtt() {
     client.publish("stationair/mode/state", current_mode, true);
     
     // ========== SOUSCRIPTION AUX TOPICS ==========
+    client.subscribe("stationair/slot1/set");
+    client.subscribe("stationair/slot2/set");
+    client.subscribe("stationair/slot3/set");
+    client.subscribe("stationair/slot4/set");
+
+    // Data venant de Home Assistant
+    client.subscribe("stationair/info/#");  // wildcard 🔥
+
     Serial.println("=== Souscription ===");
     if (client.subscribe("stationair/mode/set")) {
       Serial.println("✓ stationair/mode/set");
@@ -793,7 +802,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     const char* label = doc["lines"][i]["label"] | "";
     const char* value = doc["lines"][i]["value"] | "--";
     const char* unit  = doc["lines"][i]["unit"]  | "";
-    clean2prems; 
+    clean2prems(); 
     displayLine(i, label, value, unit);
   }
 }
@@ -826,6 +835,9 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       Serial.println("➤ MODE: InfoHA");
       aff = InfoHA;
       client.publish("stationair/mode/state", "infoha", true);
+    }else if (message == "energy") {
+      aff = MODE_ENERGY;
+      client.publish("stationair/mode/state", "energy", true);
     }
     last_30s_time = millis() - CYCLE_30s; // Rafraîchir immédiatement
   }
@@ -914,15 +926,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       }
     }
   }
-
-
-
-
-
-
-
-
-
 
 }
 
