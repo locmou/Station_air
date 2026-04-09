@@ -393,7 +393,7 @@ enum modeaff
 {
   MODE_T,
   MODE_P,
-  InfoHA
+  InfoHA,
   MODE_ENERGY
 };
 
@@ -802,7 +802,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
     const char* label = doc["lines"][i]["label"] | "";
     const char* value = doc["lines"][i]["value"] | "--";
     const char* unit  = doc["lines"][i]["unit"]  | "";
-    clean2prems(); 
+    clean2prems(0); 
     displayLine(i, label, value, unit);
   }
 }
