@@ -43,6 +43,22 @@ float press_hPa;
 float tempture;
 float Humite;
 
+// ========== VARIABLES MODE InfoHA ==========
+struct InfoData {
+  String label;      // Nom de la variable (ex: "Puissance")
+  float value;       // Valeur numérique
+  String unit;       // Unité (ex: "W", "°C", "kWh")
+  bool received;     // Indique si la donnée a été reçue
+};
+
+// 4 slots pour afficher jusqu'à 4 variables
+InfoData infoSlots[4] = {
+  {"Slot 1", 0.0, "", false},
+  {"Slot 2", 0.0, "", false},
+  {"Slot 3", 0.0, "", false},
+  {"Slot 4", 0.0, "", false}
+};
+
 // Caractères personnalisés optimisés pour chiffres LCD
 byte LT[8] = {B00111, B01111, B11111, B11111, B11111, B11111, B11111, B11111};  // 0: Left Top
 byte UB[8] = {B11111, B11111, B11111, B00000, B00000, B00000, B00000, B00000};  // 1: Upper Bar
@@ -243,6 +259,9 @@ byte tropco[8][8] = {
   {0x03, 0x03, 0x03, 0x03, 0x07, 0x1E, 0x1C, 0x00}  // 7: O Bas-Droite (fermé)
 };
 
+// ========== Topic affichage HA ==========
+const char* topic = "lcd/infoha";
+
 // ========== CONFIG WIFI ==========
 WiFiMulti wifiMulti;
 
@@ -320,6 +339,48 @@ const char discovery_switch_mode[] PROGMEM = R"({
 "state_on":"pression",
 "state_off":"temperature",
 "icon":"mdi:swap-horizontal",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+
+// ========== NOUVEAUX : SELECT POUR CHAQUE SLOT ==========
+const char discovery_select_slot1[] PROGMEM = R"({
+"name":"Info Slot 1",
+"uniq_id":"stationair_slot1",
+"cmd_t":"stationair/slot1/set",
+"stat_t":"stationair/slot1/state",
+"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
+"icon":"mdi:information-variant",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+const char discovery_select_slot2[] PROGMEM = R"({
+"name":"Info Slot 2",
+"uniq_id":"stationair_slot2",
+"cmd_t":"stationair/slot2/set",
+"stat_t":"stationair/slot2/state",
+"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
+"icon":"mdi:information-variant",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+const char discovery_select_slot3[] PROGMEM = R"({
+"name":"Info Slot 3",
+"uniq_id":"stationair_slot3",
+"cmd_t":"stationair/slot3/set",
+"stat_t":"stationair/slot3/state",
+"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
+"icon":"mdi:information-variant",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+const char discovery_select_slot4[] PROGMEM = R"({
+"name":"Info Slot 4",
+"uniq_id":"stationair_slot4",
+"cmd_t":"stationair/slot4/set",
+"stat_t":"stationair/slot4/state",
+"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
+"icon":"mdi:information-variant",
 "device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
@@ -581,6 +642,15 @@ void affichageAlerte() {
   affichmesures23();
  }
 
+// Affichage des infos HA selon 
+void displayLine(int line, const char* label, const char* value, const char* unit) {
+  lcd.setCursor(line*10-(20*(int)(line/2)), (int)(line/2));
+  lcd.print(label);
+  lcd.print(": ");
+  lcd.print(value);
+  lcd.print(unit);
+}
+
 void setup_wifi() {
   
   Serial.println("=== Connexion WiFi ===");
@@ -713,6 +783,21 @@ void reconnect_mqtt() {
   }
 }
 
+void callback(char* topic, byte* payload, unsigned int length) {
+  JsonDocument doc;
+
+  DeserializationError error = deserializeJson(doc, payload, length);
+  if (error) return;
+
+  for (int i = 0; i < 4; i++) {
+    const char* label = doc["lines"][i]["label"] | "";
+    const char* value = doc["lines"][i]["value"] | "--";
+    const char* unit  = doc["lines"][i]["unit"]  | "";
+    clean2prems; 
+    displayLine(i, label, value, unit);
+  }
+}
+
 // ========== CALLBACK MQTT (BIDIRECTIONNEL) ==========
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("\n┌─────────────────────────────");
@@ -727,7 +812,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Serial.println(message);
   Serial.println("└─────────────────────────────");
   
-  // Switch mode affichage
+  // ===== CHANGEMENT DE MODE =====
   if (strcmp(topic, "stationair/mode/set") == 0) {
     if (message == "temperature") {
       Serial.println("➤ MODE: Température");
@@ -737,11 +822,108 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
       Serial.println("➤ MODE: Pression");
       aff = MODE_P;
       client.publish("stationair/mode/state", "pression", true);
+    } else if (message == "infoha") {
+      Serial.println("➤ MODE: InfoHA");
+      aff = InfoHA;
+      client.publish("stationair/mode/state", "infoha", true);
     }
-    
-    // Forcer un rafraîchissement immédiat
-    last_30s_time = millis() - CYCLE_30s;
+    last_30s_time = millis() - CYCLE_30s; // Rafraîchir immédiatement
   }
+// ===== CONFIGURATION DES SLOTS =====
+  else if (strcmp(topic, "stationair/slot1/set") == 0) {
+    infoSlots[0].label = message;
+    infoSlots[0].received = (message != "Aucun");
+    client.publish("stationair/slot1/state", message.c_str(), true);
+    Serial.print("➤ Slot 1 configuré: ");
+    Serial.println(message);
+  }
+  else if (strcmp(topic, "stationair/slot2/set") == 0) {
+    infoSlots[1].label = message;
+    infoSlots[1].received = (message != "Aucun");
+    client.publish("stationair/slot2/state", message.c_str(), true);
+    Serial.print("➤ Slot 2 configuré: ");
+    Serial.println(message);
+  }
+  else if (strcmp(topic, "stationair/slot3/set") == 0) {
+    infoSlots[2].label = message;
+    infoSlots[2].received = (message != "Aucun");
+    client.publish("stationair/slot3/state", message.c_str(), true);
+    Serial.print("➤ Slot 3 configuré: ");
+    Serial.println(message);
+  }
+  else if (strcmp(topic, "stationair/slot4/set") == 0) {
+    infoSlots[3].label = message;
+    infoSlots[3].received = (message != "Aucun");
+    client.publish("stationair/slot4/state", message.c_str(), true);
+    Serial.print("➤ Slot 4 configuré: ");
+    Serial.println(message);
+  }
+
+// ===== RÉCEPTION DES VALEURS =====
+  else if (strcmp(topic, "stationair/info/puissance") == 0) {
+    for (int i = 0; i < 4; i++) {
+      if (infoSlots[i].label == "Puissance Soutirée") {
+        infoSlots[i].value = message.toFloat();
+        infoSlots[i].unit = "W";
+        Serial.printf("➤ Puissance: %.1f W\n", infoSlots[i].value);
+      }
+    }
+  }
+  else if (strcmp(topic, "stationair/info/pv") == 0) {
+    for (int i = 0; i < 4; i++) {
+      if (infoSlots[i].label == "Production PV") {
+        infoSlots[i].value = message.toFloat();
+        infoSlots[i].unit = "W";
+        Serial.printf("➤ Production PV: %.1f W\n", infoSlots[i].value);
+      }
+    }
+  }
+  else if (strcmp(topic, "stationair/info/temp_ext") == 0) {
+    for (int i = 0; i < 4; i++) {
+      if (infoSlots[i].label == "Température Ext") {
+        infoSlots[i].value = message.toFloat();
+        infoSlots[i].unit = "°C";
+        Serial.printf("➤ Temp Ext: %.1f °C\n", infoSlots[i].value);
+      }
+    }
+  }
+  else if (strcmp(topic, "stationair/info/conso_jour") == 0) {
+    for (int i = 0; i < 4; i++) {
+      if (infoSlots[i].label == "Consommation Jour") {
+        infoSlots[i].value = message.toFloat();
+        infoSlots[i].unit = "kWh";
+        Serial.printf("➤ Conso Jour: %.2f kWh\n", infoSlots[i].value);
+      }
+    }
+  }
+  else if (strcmp(topic, "stationair/info/prix_elec") == 0) {
+    for (int i = 0; i < 4; i++) {
+      if (infoSlots[i].label == "Prix Elec") {
+        infoSlots[i].value = message.toFloat();
+        infoSlots[i].unit = "€/kWh";
+        Serial.printf("➤ Prix Elec: %.4f €/kWh\n", infoSlots[i].value);
+      }
+    }
+  }
+  else if (strcmp(topic, "stationair/info/batterie_soc") == 0) {
+    for (int i = 0; i < 4; i++) {
+      if (infoSlots[i].label == "Batterie SOC") {
+        infoSlots[i].value = message.toFloat();
+        infoSlots[i].unit = "%";
+        Serial.printf("➤ Batterie SOC: %.0f %%\n", infoSlots[i].value);
+      }
+    }
+  }
+
+
+
+
+
+
+
+
+
+
 }
 
 /**********************************************************VOID SETUP*********************************************** */
