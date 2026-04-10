@@ -43,21 +43,16 @@ float press_hPa;
 float tempture;
 float Humite;
 
-// ========== VARIABLES MODE InfoHA ==========
-struct InfoData {
-  String label;      // Nom de la variable (ex: "Puissance")
-  float value;       // Valeur numérique
+// ========== STRUCTURE POUR MODE InfoHA ==========
+struct InfoSlot {
+  String label;      // Intitulé (ex: "Puissance")
+  String value;      // Valeur en STRING (pour flexibilité)
   String unit;       // Unité (ex: "W", "°C", "kWh")
-  bool received;     // Indique si la donnée a été reçue
+  bool configured;   // Slot configuré ?
 };
 
-// 4 slots pour afficher jusqu'à 4 variables
-InfoData infoSlots[4] = {
-  {"Slot 1", 0.0, "", false},
-  {"Slot 2", 0.0, "", false},
-  {"Slot 3", 0.0, "", false},
-  {"Slot 4", 0.0, "", false}
-};
+// 4 slots configurables depuis HA
+InfoSlot slots[4];
 
 // Caractères personnalisés optimisés pour chiffres LCD
 byte LT[8] = {B00111, B01111, B11111, B11111, B11111, B11111, B11111, B11111};  // 0: Left Top
@@ -329,60 +324,99 @@ const char discovery_press_json[] PROGMEM = R"({
 })";
 
 // ========== NOUVEAU : SWITCH MODE AFFICHAGE ==========
-const char discovery_switch_mode[] PROGMEM = R"({
+// Select Mode Affichage
+const char discovery_select_mode[] PROGMEM = R"({
 "name":"Mode Affichage",
 "uniq_id":"stationair_mode",
 "cmd_t":"stationair/mode/set",
 "stat_t":"stationair/mode/state",
-"payload_on":"pression",
-"payload_off":"temperature",
-"state_on":"pression",
-"state_off":"temperature",
+"options":["temperature","pression","infoha"],
 "icon":"mdi:swap-horizontal",
 "device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
 
-// ========== NOUVEAUX : SELECT POUR CHAQUE SLOT ==========
-const char discovery_select_slot1[] PROGMEM = R"({
-"name":"Info Slot 1",
-"uniq_id":"stationair_slot1",
-"cmd_t":"stationair/slot1/set",
-"stat_t":"stationair/slot1/state",
-"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
-"icon":"mdi:information-variant",
+// ========== NOUVEAUX : TEXT INPUTS POUR CONFIGURATION FLEXIBLE ==========
+const char discovery_text_slot1_label[] PROGMEM = R"({
+"name":"Slot 1 - Intitule",
+"uniq_id":"stationair_slot1_label",
+"cmd_t":"stationair/config/slot1/label",
+"stat_t":"stationair/config/slot1/label",
+"max":10,
+"icon":"mdi:label",
 "device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
-const char discovery_select_slot2[] PROGMEM = R"({
-"name":"Info Slot 2",
-"uniq_id":"stationair_slot2",
-"cmd_t":"stationair/slot2/set",
-"stat_t":"stationair/slot2/state",
-"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
-"icon":"mdi:information-variant",
+const char discovery_text_slot1_unit[] PROGMEM = R"({
+"name":"Slot 1 - Unite",
+"uniq_id":"stationair_slot1_unit",
+"cmd_t":"stationair/config/slot1/unit",
+"stat_t":"stationair/config/slot1/unit",
+"max":6,
+"icon":"mdi:alpha-u",
 "device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
-const char discovery_select_slot3[] PROGMEM = R"({
-"name":"Info Slot 3",
-"uniq_id":"stationair_slot3",
-"cmd_t":"stationair/slot3/set",
-"stat_t":"stationair/slot3/state",
-"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
-"icon":"mdi:information-variant",
+const char discovery_text_slot2_label[] PROGMEM = R"({
+"name":"Slot 2 - Intitule",
+"uniq_id":"stationair_slot2_label",
+"cmd_t":"stationair/config/slot2/label",
+"stat_t":"stationair/config/slot2/label",
+"max":10,
+"icon":"mdi:label",
 "device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
 
-const char discovery_select_slot4[] PROGMEM = R"({
-"name":"Info Slot 4",
-"uniq_id":"stationair_slot4",
-"cmd_t":"stationair/slot4/set",
-"stat_t":"stationair/slot4/state",
-"options":["Aucun","Puissance Soutirée","Production PV","Température Ext","Consommation Jour","Ouverture Triac","Ouverture Relais","Tension réseau"],
-"icon":"mdi:information-variant",
+const char discovery_text_slot2_unit[] PROGMEM = R"({
+"name":"Slot 2 - Unite",
+"uniq_id":"stationair_slot2_unit",
+"cmd_t":"stationair/config/slot2/unit",
+"stat_t":"stationair/config/slot2/unit",
+"max":6,
+"icon":"mdi:alpha-u",
 "device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
 })";
+
+const char discovery_text_slot3_label[] PROGMEM = R"({
+"name":"Slot 3 - Intitule",
+"uniq_id":"stationair_slot3_label",
+"cmd_t":"stationair/config/slot3/label",
+"stat_t":"stationair/config/slot3/label",
+"max":10,
+"icon":"mdi:label",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+const char discovery_text_slot3_unit[] PROGMEM = R"({
+"name":"Slot 3 - Unite",
+"uniq_id":"stationair_slot3_unit",
+"cmd_t":"stationair/config/slot3/unit",
+"stat_t":"stationair/config/slot3/unit",
+"max":6,
+"icon":"mdi:alpha-u",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+const char discovery_text_slot4_label[] PROGMEM = R"({
+"name":"Slot 4 - Intitule",
+"uniq_id":"stationair_slot4_label",
+"cmd_t":"stationair/config/slot4/label",
+"stat_t":"stationair/config/slot4/label",
+"max":10,
+"icon":"mdi:label",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
+const char discovery_text_slot4_unit[] PROGMEM = R"({
+"name":"Slot 4 - Unite",
+"uniq_id":"stationair_slot4_unit",
+"cmd_t":"stationair/config/slot4/unit",
+"stat_t":"stationair/config/slot4/unit",
+"max":6,
+"icon":"mdi:alpha-u",
+"device":{"ids":["stationair"],"name":"Station Air","mf":"DIY","mdl":"ESP32"}
+})";
+
 
 // Après les 4 messages discovery_xxx_json
 char mqttBuffer[600];  // Buffer global
@@ -393,8 +427,7 @@ enum modeaff
 {
   MODE_T,
   MODE_P,
-  InfoHA,
-  MODE_ENERGY
+  InfoHA
 };
 
 modeaff aff;
@@ -643,13 +676,53 @@ void affichageAlerte() {
   affichmesures23();
  }
 
-// Affichage des infos HA selon 
-void displayLine(int line, const char* label, const char* value, const char* unit) {
-  lcd.setCursor(line*10-(20*(int)(line/2)), (int)(line/2));
-  lcd.print(label);
-  lcd.print(": ");
-  lcd.print(value);
-  lcd.print(unit);
+// ========== NOUVEAU : AFFICHAGE MODE InfoHA FLEXIBLE ==========
+void affichageModeInfoHA() {
+  lcd.clear();
+  
+  // Lignes 0-1 : 4 infos depuis HA (2 par ligne)
+  // Format: "Label:Val Unit Label:Val Unit"
+  
+  // Ligne 0 : Slot 1 et Slot 2
+  lcd.setCursor(0, 0);
+  if (slots[0].configured) {
+    String display = slots[0].label.substring(0, 4) + ":" + slots[0].value.substring(0, 3) + slots[0].unit.substring(0, 2);
+    lcd.print(display);
+  } else {
+    lcd.print("---");
+  }
+  
+  lcd.setCursor(10, 0);
+  if (slots[1].configured) {
+    String display = slots[1].label.substring(0, 4) + ":" + slots[1].value.substring(0, 3) + slots[1].unit.substring(0, 2);
+    lcd.print(display);
+  } else {
+    lcd.print("---");
+  }
+  
+  // Ligne 1 : Slot 3 et Slot 4
+  lcd.setCursor(0, 1);
+  if (slots[2].configured) {
+    String display = slots[2].label.substring(0, 4) + ":" + slots[2].value.substring(0, 3) + slots[2].unit.substring(0, 2);
+    lcd.print(display);
+  } else {
+    lcd.print("---");
+  }
+  
+  lcd.setCursor(10, 1);
+  if (slots[3].configured) {
+    String display = slots[3].label.substring(0, 4) + ":" + slots[3].value.substring(0, 3) + slots[3].unit.substring(0, 2);
+    lcd.print(display);
+  } else {
+    lcd.print("---");
+  }
+  
+  // Lignes 2-3 : TOUJOURS les capteurs locaux
+  lcd.setCursor(0, 2);
+  lcd.printf("T:%.1fC H:%2.0f%% P:%4.0f",tempture, Humite, press_hPa);
+  
+  lcd.setCursor(0, 3);
+  lcd.printf("CO:%.2fppm Lum:%3d", ppm, bright);
 }
 
 void setup_wifi() {
@@ -681,136 +754,11 @@ void setup_wifi() {
   }
 }
 
-void reconnect_mqtt() {
 
-  mqttReconnectAttempts++;
-
-  Serial.print("Tentative MQTT ");
-  Serial.print(mqttReconnectAttempts);
-  Serial.print("/");
-  Serial.print(MAX_MQTT_ATTEMPTS);
-  Serial.print("...");
-
-
-  if (client.connect("stationair", mqtt_user, mqtt_pass,"stationair/status", 0, true, "offline")) {
-    
-    Serial.println(" OK !");
-    mqttReconnectAttempts = 0;  // Reset compteur
-    
-    client.publish("stationair/status", "online", true);
-    client.loop();
-    delay(100);
-    
-    Serial.println("Discovery...");
-    
-    // Temperature
-    memset(mqttBuffer, 0, sizeof(mqttBuffer));
-    strcpy_P(mqttBuffer, discovery_temp_json);
-    if (client.beginPublish("homeassistant/sensor/stationair_temp/config", strlen(mqttBuffer), true)) {
-      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-      client.endPublish();
-    }
-    client.loop();
-    delay(500);
-    
-    // Humidity
-    memset(mqttBuffer, 0, sizeof(mqttBuffer));
-    strcpy_P(mqttBuffer, discovery_hum_json);
-    if (client.beginPublish("homeassistant/sensor/stationair_hum/config", strlen(mqttBuffer), true)) {
-      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-      client.endPublish();
-    }
-    client.loop();
-    delay(500);
-    
-    // CO
-    memset(mqttBuffer, 0, sizeof(mqttBuffer));
-    strcpy_P(mqttBuffer, discovery_co_json);
-    if (client.beginPublish("homeassistant/sensor/stationair_co/config", strlen(mqttBuffer), true)) {
-      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-      client.endPublish();
-    }
-    client.loop();
-    delay(500);
-    
-    // Pressure
-    memset(mqttBuffer, 0, sizeof(mqttBuffer));
-    strcpy_P(mqttBuffer, discovery_press_json);
-    if (client.beginPublish("homeassistant/sensor/stationair_press/config", strlen(mqttBuffer), true)) {
-      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-      client.endPublish();
-    }
-    client.loop();
-    delay(500);
-
-    // ==========  Switch Mode Affichage ==========
-    memset(mqttBuffer, 0, sizeof(mqttBuffer));
-    strcpy_P(mqttBuffer, discovery_switch_mode);
-    if (client.beginPublish("homeassistant/switch/stationair_mode/config", strlen(mqttBuffer), true)) {
-      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
-      client.endPublish();
-    }
-    client.loop();
-    delay(500);
-
-    Serial.println("Discovery OK");
-    
-    // Publier l'état actuel du mode
-    const char* current_mode = (aff == MODE_T) ? "temperature" : "pression";
-    client.publish("stationair/mode/state", current_mode, true);
-    
-    // ========== SOUSCRIPTION AUX TOPICS ==========
-    client.subscribe("stationair/slot1/set");
-    client.subscribe("stationair/slot2/set");
-    client.subscribe("stationair/slot3/set");
-    client.subscribe("stationair/slot4/set");
-
-    // Data venant de Home Assistant
-    client.subscribe("stationair/info/#");  // wildcard 🔥
-
-    Serial.println("=== Souscription ===");
-    if (client.subscribe("stationair/mode/set")) {
-      Serial.println("✓ stationair/mode/set");
-    }
-    Serial.println("====================");
-
-    client.publish("stationair/data", 
-                   "{\"temperature\":0,\"humidity\":0,\"co\":0,\"pressure\":0}", 
-                   true);
-    
-  } else {
-    Serial.print(" Échec (");
-    Serial.print(client.state());
-    Serial.println(")");
-    
-    // Après MAX_MQTT_ATTEMPTS échecs, attendre plus longtemps
-    if (mqttReconnectAttempts >= MAX_MQTT_ATTEMPTS) {
-      Serial.println("Trop d'échecs MQTT, pause jusqu'au prochain cycle");
-      mqttReconnectAttempts = 0;
-
-    }
-  }
-}
-
-void callback(char* topic, byte* payload, unsigned int length) {
-  JsonDocument doc;
-
-  DeserializationError error = deserializeJson(doc, payload, length);
-  if (error) return;
-
-  for (int i = 0; i < 4; i++) {
-    const char* label = doc["lines"][i]["label"] | "";
-    const char* value = doc["lines"][i]["value"] | "--";
-    const char* unit  = doc["lines"][i]["unit"]  | "";
-    clean2prems(0); 
-    displayLine(i, label, value, unit);
-  }
-}
-
-// ========== CALLBACK MQTT (BIDIRECTIONNEL) ==========
+// ========== CALLBACK MQTT (FLEXIBLE) ==========
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   Serial.println("\n┌─────────────────────────────");
-  Serial.print("│ MQTT reçu: ");
+  Serial.print("│ MQTT: ");
   Serial.println(topic);
   
   String message = "";
@@ -824,110 +772,270 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   // ===== CHANGEMENT DE MODE =====
   if (strcmp(topic, "stationair/mode/set") == 0) {
     if (message == "temperature") {
-      Serial.println("➤ MODE: Température");
       aff = MODE_T;
       client.publish("stationair/mode/state", "temperature", true);
     } else if (message == "pression") {
-      Serial.println("➤ MODE: Pression");
       aff = MODE_P;
       client.publish("stationair/mode/state", "pression", true);
     } else if (message == "infoha") {
-      Serial.println("➤ MODE: InfoHA");
-      aff = InfoHA;
+      aff = MODE_InfoHA;
       client.publish("stationair/mode/state", "infoha", true);
-    }else if (message == "energy") {
-      aff = MODE_ENERGY;
-      client.publish("stationair/mode/state", "energy", true);
     }
-    last_30s_time = millis() - CYCLE_30s; // Rafraîchir immédiatement
+    last_30s_time = millis() - CYCLE_30s;
   }
-// ===== CONFIGURATION DES SLOTS =====
-  else if (strcmp(topic, "stationair/slot1/set") == 0) {
-    infoSlots[0].label = message;
-    infoSlots[0].received = (message != "Aucun");
-    client.publish("stationair/slot1/state", message.c_str(), true);
-    Serial.print("➤ Slot 1 configuré: ");
+  
+  // ===== CONFIGURATION DES LABELS =====
+  else if (strcmp(topic, "stationair/config/slot1/label") == 0) {
+    slots[0].label = message;
+    slots[0].configured = (message.length() > 0);
+    client.publish("stationair/config/slot1/label", message.c_str(), true);
+    Serial.print("➤ Slot 1 Label: ");
     Serial.println(message);
   }
-  else if (strcmp(topic, "stationair/slot2/set") == 0) {
-    infoSlots[1].label = message;
-    infoSlots[1].received = (message != "Aucun");
-    client.publish("stationair/slot2/state", message.c_str(), true);
-    Serial.print("➤ Slot 2 configuré: ");
-    Serial.println(message);
+  else if (strcmp(topic, "stationair/config/slot2/label") == 0) {
+    slots[1].label = message;
+    slots[1].configured = (message.length() > 0);
+    client.publish("stationair/config/slot2/label", message.c_str(), true);
   }
-  else if (strcmp(topic, "stationair/slot3/set") == 0) {
-    infoSlots[2].label = message;
-    infoSlots[2].received = (message != "Aucun");
-    client.publish("stationair/slot3/state", message.c_str(), true);
-    Serial.print("➤ Slot 3 configuré: ");
-    Serial.println(message);
+  else if (strcmp(topic, "stationair/config/slot3/label") == 0) {
+    slots[2].label = message;
+    slots[2].configured = (message.length() > 0);
+    client.publish("stationair/config/slot3/label", message.c_str(), true);
   }
-  else if (strcmp(topic, "stationair/slot4/set") == 0) {
-    infoSlots[3].label = message;
-    infoSlots[3].received = (message != "Aucun");
-    client.publish("stationair/slot4/state", message.c_str(), true);
-    Serial.print("➤ Slot 4 configuré: ");
-    Serial.println(message);
+  else if (strcmp(topic, "stationair/config/slot4/label") == 0) {
+    slots[3].label = message;
+    slots[3].configured = (message.length() > 0);
+    client.publish("stationair/config/slot4/label", message.c_str(), true);
   }
-
-// ===== RÉCEPTION DES VALEURS =====
-  else if (strcmp(topic, "stationair/info/puissance") == 0) {
-    for (int i = 0; i < 4; i++) {
-      if (infoSlots[i].label == "Puissance Soutirée") {
-        infoSlots[i].value = message.toFloat();
-        infoSlots[i].unit = "W";
-        Serial.printf("➤ Puissance: %.1f W\n", infoSlots[i].value);
-      }
-    }
+  
+  // ===== CONFIGURATION DES UNITÉS =====
+  else if (strcmp(topic, "stationair/config/slot1/unit") == 0) {
+    slots[0].unit = message;
+    client.publish("stationair/config/slot1/unit", message.c_str(), true);
   }
-  else if (strcmp(topic, "stationair/info/pv") == 0) {
-    for (int i = 0; i < 4; i++) {
-      if (infoSlots[i].label == "Production PV") {
-        infoSlots[i].value = message.toFloat();
-        infoSlots[i].unit = "W";
-        Serial.printf("➤ Production PV: %.1f W\n", infoSlots[i].value);
-      }
-    }
+  else if (strcmp(topic, "stationair/config/slot2/unit") == 0) {
+    slots[1].unit = message;
+    client.publish("stationair/config/slot2/unit", message.c_str(), true);
   }
-  else if (strcmp(topic, "stationair/info/temp_ext") == 0) {
-    for (int i = 0; i < 4; i++) {
-      if (infoSlots[i].label == "Température Ext") {
-        infoSlots[i].value = message.toFloat();
-        infoSlots[i].unit = "°C";
-        Serial.printf("➤ Temp Ext: %.1f °C\n", infoSlots[i].value);
-      }
-    }
+  else if (strcmp(topic, "stationair/config/slot3/unit") == 0) {
+    slots[2].unit = message;
+    client.publish("stationair/config/slot3/unit", message.c_str(), true);
   }
-  else if (strcmp(topic, "stationair/info/conso_jour") == 0) {
-    for (int i = 0; i < 4; i++) {
-      if (infoSlots[i].label == "Consommation Jour") {
-        infoSlots[i].value = message.toFloat();
-        infoSlots[i].unit = "kWh";
-        Serial.printf("➤ Conso Jour: %.2f kWh\n", infoSlots[i].value);
-      }
-    }
+  else if (strcmp(topic, "stationair/config/slot4/unit") == 0) {
+    slots[3].unit = message;
+    client.publish("stationair/config/slot4/unit", message.c_str(), true);
   }
-  else if (strcmp(topic, "stationair/info/prix_elec") == 0) {
-    for (int i = 0; i < 4; i++) {
-      if (infoSlots[i].label == "Prix Elec") {
-        infoSlots[i].value = message.toFloat();
-        infoSlots[i].unit = "€/kWh";
-        Serial.printf("➤ Prix Elec: %.4f €/kWh\n", infoSlots[i].value);
-      }
-    }
+  
+  // ===== RÉCEPTION DES VALEURS (GÉNÉRIQUE) =====
+  else if (strcmp(topic, "stationair/data/slot1") == 0) {
+    slots[0].value = message;
+    Serial.printf("➤ Slot 1 Value: %s\n", message.c_str());
   }
-  else if (strcmp(topic, "stationair/info/batterie_soc") == 0) {
-    for (int i = 0; i < 4; i++) {
-      if (infoSlots[i].label == "Batterie SOC") {
-        infoSlots[i].value = message.toFloat();
-        infoSlots[i].unit = "%";
-        Serial.printf("➤ Batterie SOC: %.0f %%\n", infoSlots[i].value);
-      }
-    }
+  else if (strcmp(topic, "stationair/data/slot2") == 0) {
+    slots[1].value = message;
   }
-
+  else if (strcmp(topic, "stationair/data/slot3") == 0) {
+    slots[2].value = message;
+  }
+  else if (strcmp(topic, "stationair/data/slot4") == 0) {
+    slots[3].value = message;
+  }
 }
+
+
+void reconnect_mqtt() {
+  mqttReconnectAttempts++;
+  Serial.print("Tentative MQTT ");
+  Serial.print(mqttReconnectAttempts);
+  Serial.print("/");
+  Serial.print(MAX_MQTT_ATTEMPTS);
+  Serial.print("...");
+
+  if (client.connect("stationair", mqtt_user, mqtt_pass,
+                     "stationair/status", 0, true, "offline")) {
+    
+    Serial.println(" OK !");
+    mqttReconnectAttempts = 0;
+    
+    client.publish("stationair/status", "online", true);
+    client.loop();
+    delay(100);
+    
+    Serial.println("Discovery...");
+    
+    // Capteurs de base (Temp, Hum, CO, Pressure)
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_temp_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_temp/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_hum_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_hum/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_co_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_co/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_press_json);
+    if (client.beginPublish("homeassistant/sensor/stationair_press/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // Select Mode
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_select_mode);
+    if (client.beginPublish("homeassistant/select/stationair_mode/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // ========== CONFIGURATION DES SLOTS (TEXT INPUTS) ==========
+    // Slot 1
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot1_label);
+    if (client.beginPublish("homeassistant/text/stationair_slot1_label/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot1_unit);
+    if (client.beginPublish("homeassistant/text/stationair_slot1_unit/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // Slot 2
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot2_label);
+    if (client.beginPublish("homeassistant/text/stationair_slot2_label/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot2_unit);
+    if (client.beginPublish("homeassistant/text/stationair_slot2_unit/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // Slot 3
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot3_label);
+    if (client.beginPublish("homeassistant/text/stationair_slot3_label/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot3_unit);
+    if (client.beginPublish("homeassistant/text/stationair_slot3_unit/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    // Slot 4
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot4_label);
+    if (client.beginPublish("homeassistant/text/stationair_slot4_label/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    memset(mqttBuffer, 0, sizeof(mqttBuffer));
+    strcpy_P(mqttBuffer, discovery_text_slot4_unit);
+    if (client.beginPublish("homeassistant/text/stationair_slot4_unit/config", strlen(mqttBuffer), true)) {
+      client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
+      client.endPublish();
+    }
+    client.loop();
+    delay(500);
+    
+    Serial.println("Discovery OK");
+    
+    // Publier état mode
+    const char* current_mode;
+    if (aff == MODE_T) current_mode = "temperature";
+    else if (aff == MODE_P) current_mode = "pression";
+    else current_mode = "infoha";
+    client.publish("stationair/mode/state", current_mode, true);
+    
+    // ========== SOUSCRIPTION AUX TOPICS ==========
+    Serial.println("=== Souscription ===");
+    client.subscribe("stationair/mode/set");
+    
+    // Configuration
+    client.subscribe("stationair/config/slot1/label");
+    client.subscribe("stationair/config/slot1/unit");
+    client.subscribe("stationair/config/slot2/label");
+    client.subscribe("stationair/config/slot2/unit");
+    client.subscribe("stationair/config/slot3/label");
+    client.subscribe("stationair/config/slot3/unit");
+    client.subscribe("stationair/config/slot4/label");
+    client.subscribe("stationair/config/slot4/unit");
+    Serial.println("✓ Config slots");
+    
+    // Données
+    client.subscribe("stationair/data/slot1");
+    client.subscribe("stationair/data/slot2");
+    client.subscribe("stationair/data/slot3");
+    client.subscribe("stationair/data/slot4");
+    Serial.println("✓ Data slots");
+    
+    Serial.println("====================");
+    
+    client.publish("stationair/data",
+                   "{\"temperature\":0,\"humidity\":0,\"co\":0,\"pressure\":0}",
+                   true);
+    
+  } else {
+    Serial.print(" Échec (");
+    Serial.print(client.state());
+    Serial.println(")");
+    
+    if (mqttReconnectAttempts >= MAX_MQTT_ATTEMPTS) {
+      Serial.println("Trop d'échecs MQTT");
+      mqttReconnectAttempts = 0;
+    }
+  }
+}
+
 
 /**********************************************************VOID SETUP*********************************************** */
 /**********************************************************VOID SETUP*********************************************** */
@@ -937,6 +1045,14 @@ void setup() {
   disableCore0WDT();
   Serial.begin(115200);
   delay(1000);
+
+  // Initialiser les slots
+  for (int i = 0; i < 4; i++) {
+    slots[i].label = "";
+    slots[i].value = "---";
+    slots[i].unit = "";
+    slots[i].configured = false;
+  }
 
   setup_wifi();
 
@@ -1058,8 +1174,7 @@ void loop() {
     } else {
       if (aff == MODE_T) affichageModeT();
       else if (aff==MODE_P) affichageModeP();
-      else  {
-      }
+      else if (aff == MODE_InfoHA) affichageModeInfoHA();
     }
 
     // 1. Vérifier WiFi
