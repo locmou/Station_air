@@ -427,7 +427,7 @@ enum modeaff
 {
   MODE_T,
   MODE_P,
-  InfoHA
+  MODE_InfoHA
 };
 
 modeaff aff;

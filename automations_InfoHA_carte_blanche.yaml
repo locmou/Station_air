@@ -6,79 +6,82 @@
 # ===== MÉTHODE 1 : DIRECT (changement d'état) =====
 # Envoyer immédiatement quand le sensor change
 
-- alias: "ESP32 - Slot 1 Direct"
-  description: "Envoyer données slot 1 à chaque changement"
-  trigger:
-    - platform: state
-      entity_id: sensor.power_consumption  # ← Votre sensor
-  action:
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot1"
-        payload: "{{ states('sensor.power_consumption') | round(0) }}"
+  alias: ESP32 - Slot 1
+  description: Envoyer données slot 1
+  triggers:
+     - entity_id: sensor.routeur_rms_energie_jour_m_soutiree
+       trigger: state
+  actions:
+     - data:
+         topic: stationair/data/slot1
+         payload_template: "{{ states('sensor.routeur_rms_energie_jour_m_soutiree') | round(0) }}"
+       action: mqtt.publish
 
-- alias: "ESP32 - Slot 2 Direct"
-  trigger:
-    - platform: state
-      entity_id: sensor.solar_production  # ← Votre sensor
-  action:
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot2"
-        payload: "{{ states('sensor.solar_production') | round(0) }}"
+  alias: ESP32 - Slot 2
+  description: Envoyer données slot 2
+  triggers:
+     - entity_id: sensor.elec_moun_s_puissance
+       trigger: state
+  actions:
+    - data:
+        topic: stationair/data/slot2
+        payload_template: "{{ states('sensor.elec_moun_s_puissance') | round(0) }}"
+      action: mqtt.publish
 
-- alias: "ESP32 - Slot 3 Direct"
-  trigger:
-    - platform: state
-      entity_id: sensor.outdoor_temperature  # ← Votre sensor
-  action:
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot3"
-        payload: "{{ states('sensor.outdoor_temperature') | round(1) }}"
+  alias: ESP32 - Slot 3
+  description: Envoyer données slot 3
+  triggers:
+    - entity_id: weather.forecast_maison
+      trigger: state
+  actions:
+    - data:
+        topic: stationair/data/slot3
+        payload_template: "{{ state_attr('weather.forecast_maison', 'temperature') | round(1) }}"
+      action: mqtt.publish
 
-- alias: "ESP32 - Slot 4 Direct"
-  trigger:
-    - platform: state
-      entity_id: sensor.daily_energy  # ← Votre sensor
-  action:
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot4"
-        payload: "{{ states('sensor.daily_energy') | round(2) }}"
+  alias: ESP32 - Slot 4
+  description: Envoyer données slot 4
+  triggers:
+    - entity_id: sensor.rennes_ballon_evier_relais_ouverture
+      trigger: state
+  actions:
+    - data:
+        topic: stationair/data/slot4
+        payload_template: "{{ states('sensor.rennes_ballon_evier_relais_ouverture') | round(0) }}"
+      action: mqtt.publish
 
 # ========================================
 # MÉTHODE 2 : PÉRIODIQUE (toutes les 30s)
 # ========================================
-- alias: "ESP32 - Rafraîchir tous les slots (30s)"
-  description: "Envoyer toutes les valeurs toutes les 30 secondes"
-  trigger:
-    - platform: time_pattern
-      seconds: "/30"
-  action:
-    # Slot 1
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot1"
-        payload: "{{ states('sensor.power_consumption') | float(0) | round(0) }}"
-    
-    # Slot 2
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot2"
-        payload: "{{ states('sensor.solar_production') | float(0) | round(0) }}"
-    
-    # Slot 3
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot3"
-        payload: "{{ states('sensor.outdoor_temperature') | float(0) | round(1) }}"
-    
-    # Slot 4
-    - service: mqtt.publish
-      data:
-        topic: "stationair/data/slot4"
-        payload: "{{ states('sensor.daily_energy') | float(0) | round(2) }}"
+  alias: ESP32 - Rafraîchir InfoHA
+  description: Envoyer toutes les valeurs toutes les 30s
+  triggers:
+    - seconds: /30
+      trigger: time_pattern
+  actions:
+    - data:
+        topic: stationair/data/slot1
+        payload_template: >-
+          {{ states('sensor.routeur_rms_energie_jour_m_soutiree') | float(0) |
+          round(0) }}
+      action: mqtt.publish
+    - data:
+        topic: stationair/data/slot2
+        payload_template: "{{ states('sensor.elec_moun_s_puissance') | float(0) | round(0) }}"
+      action: mqtt.publish
+    - data:
+        topic: stationair/data/slot3
+        payload_template: >-
+          {{ state_attr('weather.forecast_maison', 'temperature') | float(0) |
+          round(1) }}
+      action: mqtt.publish
+    - data:
+        topic: stationair/data/slot4
+        payload_template: >-
+          {{ states('sensor.rennes_ballon_evier_relais_ouverture') | float(0) |
+          round(2) }}
+      action: mqtt.publish
+
 
 # ========================================
 # MÉTHODE 3 : DYNAMIQUE avec HELPERS
