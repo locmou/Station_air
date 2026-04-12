@@ -254,9 +254,6 @@ byte tropco[8][8] = {
   {0x03, 0x03, 0x03, 0x03, 0x07, 0x1E, 0x1C, 0x00}  // 7: O Bas-Droite (fermé)
 };
 
-// ========== Topic affichage HA ==========
-const char* topic = "lcd/infoha";
-
 // ========== CONFIG WIFI ==========
 WiFiMulti wifiMulti;
 
