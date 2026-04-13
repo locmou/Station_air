@@ -1060,7 +1060,7 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.clear();
-   aff = MODE_P;
+  aff = MODE_InfoHA;
 
   // I2C
   Wire.begin(21, 22);

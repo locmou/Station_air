@@ -1,0 +1,36 @@
+
+type: vertical-stack
+cards:
+  - type: entities
+    title: 📺 Mode Affichage LCD
+    entities:
+      - entity: select.station_air_mode_affichage
+        name: Mode d'affichage
+  - type: entities
+    title: ⚙️ Configuration InfoHA
+    entities:
+      - type: section
+        label: 📍 Slot 1 (Ligne 0, gauche)
+      - entity: text.station_air_slot_1_intitule
+        name: "  Intitulé (max 10 car)"
+      - entity: text.station_air_slot_1_unite
+        name: "  Unité (max 6 car)"
+      - type: section
+        label: 📍 Slot 2 (Ligne 0, droite)
+      - entity: text.station_air_slot_2_intitule
+      - entity: text.station_air_slot_2_unite
+      - type: section
+        label: 📍 Slot 3 (Ligne 1, gauche)
+      - entity: text.station_air_slot_3_intitule
+      - entity: text.station_air_slot_3_unite
+      - type: section
+        label: 📍 Slot 4 (Ligne 1, droite)
+      - entity: text.station_air_slot_4_intitule
+      - entity: text.station_air_slot_4_unite
+  - type: entities
+    title: 🌡️ Capteurs Station (toujours lignes 2-3)
+    entities:
+      - entity: sensor.temp
+      - entity: sensor.station_air_humidite
+      - entity: sensor.station_air_pression
+      - entity: sensor.station_air_humidite
