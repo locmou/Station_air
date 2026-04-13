@@ -785,42 +785,34 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   else if (strcmp(topic, "stationair/config/slot1/label") == 0) {
     slots[0].label = message;
     slots[0].configured = (message.length() > 0);
-    // client.publish("stationair/config/slot1/label", message.c_str(), true);  // ← SUPPRIMER CETTE LIGNE
     Serial.print("➤ Slot 1 Label: ");
     Serial.println(message);
   }
   else if (strcmp(topic, "stationair/config/slot2/label") == 0) {
     slots[1].label = message;
     slots[1].configured = (message.length() > 0);
-    // client.publish("stationair/config/slot2/label", message.c_str(), true);  // ← SUPPRIMER
   }
   else if (strcmp(topic, "stationair/config/slot3/label") == 0) {
     slots[2].label = message;
     slots[2].configured = (message.length() > 0);
-    // client.publish("stationair/config/slot3/label", message.c_str(), true);  // ← SUPPRIMER
   }
   else if (strcmp(topic, "stationair/config/slot4/label") == 0) {
     slots[3].label = message;
     slots[3].configured = (message.length() > 0);
-    // client.publish("stationair/config/slot4/label", message.c_str(), true);  // ← SUPPRIMER
   }
 
   // ===== CONFIGURATION DES UNITÉS =====
   else if (strcmp(topic, "stationair/config/slot1/unit") == 0) {
     slots[0].unit = message;
-    // client.publish("stationair/config/slot1/unit", message.c_str(), true);  // ← SUPPRIMER
   }
   else if (strcmp(topic, "stationair/config/slot2/unit") == 0) {
     slots[1].unit = message;
-    // client.publish("stationair/config/slot2/unit", message.c_str(), true);  // ← SUPPRIMER
   }
   else if (strcmp(topic, "stationair/config/slot3/unit") == 0) {
     slots[2].unit = message;
-    // client.publish("stationair/config/slot3/unit", message.c_str(), true);  // ← SUPPRIMER
   }
   else if (strcmp(topic, "stationair/config/slot4/unit") == 0) {
     slots[3].unit = message;
-    // client.publish("stationair/config/slot4/unit", message.c_str(), true);  // ─ SUPPRIMER
   }
   
   // ===== RÉCEPTION DES VALEURS (GÉNÉRIQUE) =====
