@@ -1,8 +1,8 @@
 alias: ESP32 - Rafraîchir InfoHA
 description: Envoyer toutes les valeurs toutes les 30s
 triggers:
-  - seconds: /30
-    trigger: time_pattern
+  - trigger: time_pattern
+    minutes: /3
 actions:
   - action: mqtt.publish
     data:
