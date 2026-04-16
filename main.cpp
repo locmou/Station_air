@@ -1,5 +1,5 @@
 /*
-Reste à faire : mqtt double sens pour une bascule en mode T ou P depuis HA et Pourquoi pas un mode bilan énergétique ou watt instantané poussé depuis home assitant...
+
 */
 
 #include <Arduino.h>
@@ -713,13 +713,7 @@ void affichageModeInfoHA() {
   } else {
     lcd.print("---");
   }
-  
-  // Lignes 2-3 : TOUJOURS les capteurs locaux
-  lcd.setCursor(0, 2);
-  lcd.printf("T:%.1fC H:%2.0f%% P:%4.0f",tempture, Humite, press_hPa);
-  
-  lcd.setCursor(0, 3);
-  lcd.printf("CO:%.2fppm Lum:%3d", ppm, bright);
+  affichmesures23();
 }
 
 void setup_wifi() {
@@ -729,8 +723,6 @@ void setup_wifi() {
 
   // Ajoute ici tous les réseaux possibles
   wifiMulti.addAP(WIFI_SSID_1, WIFI_PASS_1);
-
-  
   Serial.print("Connexion en cours");
 
   // Tentative de connexion (timeout 10 secondes)
@@ -831,7 +823,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-
 void reconnect_mqtt() {
   mqttReconnectAttempts++;
   Serial.print("Tentative MQTT ");
@@ -840,16 +831,12 @@ void reconnect_mqtt() {
   Serial.print(MAX_MQTT_ATTEMPTS);
   Serial.print("...");
 
-  if (client.connect("stationair", mqtt_user, mqtt_pass,
-                     "stationair/status", 0, true, "offline")) {
-    
+  if (client.connect("stationair", mqtt_user, mqtt_pass,"stationair/status", 0, true, "offline")) {    
     Serial.println(" OK !");
-    mqttReconnectAttempts = 0;
-    
+    mqttReconnectAttempts = 0;  
     client.publish("stationair/status", "online", true);
     client.loop();
     delay(100);
-    
     Serial.println("Discovery...");
     
     // Capteurs de base (Temp, Hum, CO, Pressure)
@@ -861,9 +848,10 @@ void reconnect_mqtt() {
     }
     client.loop();
     delay(500);
-    
+
     memset(mqttBuffer, 0, sizeof(mqttBuffer));
     strcpy_P(mqttBuffer, discovery_hum_json);
+
     if (client.beginPublish("homeassistant/sensor/stationair_hum/config", strlen(mqttBuffer), true)) {
       client.write((uint8_t*)mqttBuffer, strlen(mqttBuffer));
       client.endPublish();
@@ -1147,17 +1135,15 @@ void loop() {
     rs = readRS(rawValue);
     ratio = rs / Ro;
     ppm = calculatePPM(ratio);
-  
    
     // Affichage série
     Serial.println("===== Nouvelles mesures =====");
 
 
-
     //*********************************************** 
     // ***************Affichage LCD******************
     //*********************************************** 
-   
+
     if (ppm >= 10) {
       affichageAlerte();
     } else {
